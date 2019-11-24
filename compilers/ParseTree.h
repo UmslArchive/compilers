@@ -30,7 +30,7 @@ public:
     int indent;
 
 	//Static semantics
-	void traverseTree(node* root);
+	void staticSemanticsTraversal(node* root);
 	void staticSemantics(node* node);
 
 	int varCount;

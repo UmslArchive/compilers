@@ -52,11 +52,11 @@ void ParseTree::printAll(node* root) {
     }
 }
 
-void ParseTree::traverseTree(node* root) {
+void ParseTree::staticSemanticsTraversal(node* root) {
 	staticSemantics(root);
 	for (int i = 0; i < root->children.size(); ++i) {
 		if (root->children[i] != NULL) {
-			traverseTree(root->children[i]);
+			staticSemanticsTraversal(root->children[i]);
 		}
 	}
 }
@@ -118,7 +118,8 @@ void ParseTree::staticSemantics(node* node) {
 		}
 
 		if (noMatch) {
-			std::cout << "ERROR: " << node->data[1] << " undeclared" << std::endl;
+			std::cout << "ERROR: identifier '" << node->data[1] << "' undeclared" << std::endl;
+			exit(1);
 		}
 	}
 
@@ -130,7 +131,8 @@ void ParseTree::staticSemantics(node* node) {
 		}
 
 		if (noMatch) {
-			std::cout << "ERROR: " << node->data[1] << " undeclared" << std::endl;
+			std::cout << "ERROR: identifier '" << node->data[1] << "' undeclared" << std::endl;
+			exit(1);
 		}
 	}
 
@@ -142,7 +144,8 @@ void ParseTree::staticSemantics(node* node) {
 		}
 
 		if (noMatch) {
-			std::cout << "ERROR: " << node->data[0] << " undeclared" << std::endl;
+			std::cout << "ERROR: identifier '" << node->data[0] << "' undeclared" << std::endl;
+			exit(1);
 		}
 	}
 }

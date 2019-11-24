@@ -29,16 +29,16 @@ ParseTree Parser::parse() {
 node* Parser::program() {
     if(debug) std::cout << "entered PROGRAM" << std::endl;
 
-    std::cout << std::endl << "PARSING..." << std::endl << std::endl;
+    //std::cout << std::endl << "PARSING..." << std::endl << std::endl;
 
     node* programNode = new node("program");
     currentToken = scanner.getNextToken();
-    currentToken.printToken();
+    //currentToken.printToken();
     programNode->children.push_back(vars());
     programNode->children.push_back(block());
 
     if(currentToken.getID() == EOF_tk) {
-        std::cout << "\nFINISHED -- VALID PROGRAM" << std::endl;
+        //std::cout << "\nFINISHED -- VALID PROGRAM" << std::endl;
         return programNode;
     }
     else {
@@ -53,12 +53,12 @@ node* Parser::block() {
     node* blockNode = new node("block");
     if(currentToken.getID() == KWD_START_tk){
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         blockNode->children.push_back(vars());
         blockNode->children.push_back(stats());
         if(currentToken.getID() == KWD_STOP_tk) {
             currentToken = scanner.getNextToken();
-            currentToken.printToken();
+            //currentToken.printToken();
 			blockNode->children.push_back(new node("endBlock"));
             if(debug) std::cout << "exit BLOCK 1" << std::endl;
             return blockNode;
@@ -77,18 +77,18 @@ node* Parser::vars() {
     node* varsNode = new node("vars");
     if(currentToken.getID() == KWD_VAR_tk) {
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(currentToken.getID() == IDENTIFIER_tk) {
             varsNode->data.push_back(currentToken.getInstance());
             currentToken = scanner.getNextToken();
-            currentToken.printToken();
+            //currentToken.printToken();
             if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(":") == 0) {
                 currentToken = scanner.getNextToken();
-                currentToken.printToken();
+                //currentToken.printToken();
                 if(currentToken.getID() == INTEGER_tk) {
                     varsNode->data.push_back(currentToken.getInstance());
                     currentToken = scanner.getNextToken();
-                    currentToken.printToken();
+                    //currentToken.printToken();
                     varsNode->children.push_back(vars());
                     if(debug) std::cout << "exit VARS 1" << std::endl;
                     return varsNode;
@@ -125,7 +125,7 @@ node* Parser::Z() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("+") == 0) {
         zNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         zNode->children.push_back(expr());
         if(debug) std::cout << "exit Z" << std::endl;
         return zNode;
@@ -149,7 +149,7 @@ node* Parser::Y() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("-") == 0) {
         yNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         yNode->children.push_back(A());
 		if (debug) std::cout << "exit Y" << std::endl;
 		return yNode;
@@ -174,7 +174,7 @@ node* Parser::X() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("/") == 0) {
         xNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         xNode->children.push_back(N());
         if(debug) std::cout << "exit X" << std::endl;
         return xNode;
@@ -182,7 +182,7 @@ node* Parser::X() {
     else if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("*") == 0) {
         xNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         xNode->children.push_back(N());
         if(debug) std::cout << "exit X" << std::endl;
         return xNode;
@@ -197,7 +197,7 @@ node* Parser::M() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("-") == 0) {
         mNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         mNode->children.push_back(M());
         if(debug) std::cout << "exit M" << std::endl;
         return mNode;
@@ -215,12 +215,12 @@ node* Parser::R() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("[") == 0) {
         rNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         rNode->children.push_back(expr());
         if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("]") == 0) {
             rNode->data.push_back(currentToken.getInstance());
             currentToken = scanner.getNextToken();
-            currentToken.printToken();
+            //currentToken.printToken();
             if(debug) std::cout << "exit R" << std::endl;
             return rNode;
         }
@@ -233,14 +233,14 @@ node* Parser::R() {
 		rNode->data.push_back("identifier");
         rNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(debug) std::cout << "exit R" << std::endl;
         return rNode;
     }
     else if(currentToken.getID() == INTEGER_tk) {
         rNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(debug) std::cout << "exit R" << std::endl;
         return rNode;
     }
@@ -258,7 +258,7 @@ node* Parser::stats() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(";") == 0) {
         //statsNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         statsNode->children.push_back(mStat());
         if(debug) std::cout << "exit STATS" << std::endl;
         return statsNode;
@@ -277,7 +277,7 @@ node* Parser::mStat() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(";") == 0) {
         //mStatNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         mStatNode->children.push_back(mStat());
         if(debug) std::cout << "exit MSTAT 1" << std::endl;
         return mStatNode;
@@ -307,11 +307,11 @@ node* Parser::in() {
     if(currentToken.getID() == KWD_IN_tk) {
         inNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(currentToken.getID() == IDENTIFIER_tk) {
             inNode->data.push_back(currentToken.getInstance());
             currentToken = scanner.getNextToken();
-            currentToken.printToken();
+            //currentToken.printToken();
             if(debug) std::cout << "exit IN" << std::endl;
             return inNode;
         }
@@ -328,7 +328,7 @@ node* Parser::out() {
     if(currentToken.getID() == KWD_OUT_tk) {
         outNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         outNode->children.push_back(expr());
         if(debug) std::cout << "exit OUT" << std::endl;
         return outNode;
@@ -343,26 +343,26 @@ node* Parser::IF() {
     if(currentToken.getID() == KWD_COND_tk) {
         ifNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("(") == 0) {
             ifNode->data.push_back(currentToken.getInstance());
             currentToken = scanner.getNextToken();
-            currentToken.printToken();
+            //currentToken.printToken();
             if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("(") == 0) {
                 ifNode->data.push_back(currentToken.getInstance());
                 currentToken = scanner.getNextToken();
-                currentToken.printToken();
+                //currentToken.printToken();
                 ifNode->children.push_back(expr());
                 ifNode->children.push_back(RO());
                 ifNode->children.push_back(expr());
                 if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(")") == 0) {
                     ifNode->data.push_back(currentToken.getInstance());
                     currentToken = scanner.getNextToken();
-                    currentToken.printToken();
+                    //currentToken.printToken();
                     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(")") == 0) {
                         ifNode->data.push_back(currentToken.getInstance());
                         currentToken = scanner.getNextToken();
-                        currentToken.printToken();
+                        //currentToken.printToken();
                         ifNode->children.push_back(stat());
                         if(debug) std::cout << "exit IF" << std::endl;
                         return ifNode;
@@ -394,26 +394,26 @@ node* Parser::loop() {
     if(currentToken.getID() == KWD_ITERATE_tk) {
         loopNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("(") == 0) {
             loopNode->data.push_back(currentToken.getInstance());
             currentToken = scanner.getNextToken();
-            currentToken.printToken();
+            //currentToken.printToken();
             if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("(") == 0) {
                 loopNode->data.push_back(currentToken.getInstance());
                 currentToken = scanner.getNextToken();
-                currentToken.printToken();
+                //currentToken.printToken();
                 loopNode->children.push_back(expr());
                 loopNode->children.push_back(RO());
                 loopNode->children.push_back(expr());
                 if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(")") == 0) {
                     loopNode->data.push_back(currentToken.getInstance());
                     currentToken = scanner.getNextToken();
-                    currentToken.printToken();
+                    //currentToken.printToken();
                     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(")") == 0) {
                         loopNode->data.push_back(currentToken.getInstance());
                         currentToken = scanner.getNextToken();
-                        currentToken.printToken();
+                        //currentToken.printToken();
                         loopNode->children.push_back(stat());
                         if(debug) std::cout << "exit LOOP" << std::endl;
                         return loopNode;
@@ -444,15 +444,15 @@ node* Parser::assign() {
     if(currentToken.getID() == IDENTIFIER_tk) {
         assignNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("<") == 0) {
             assignNode->data.push_back(currentToken.getInstance());
             currentToken = scanner.getNextToken();
-            currentToken.printToken();
+            //currentToken.printToken();
             if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("<") == 0) {
                 assignNode->data.push_back(currentToken.getInstance());
                 currentToken = scanner.getNextToken();
-                currentToken.printToken();
+                //currentToken.printToken();
                 assignNode->children.push_back(expr());
                 if(debug) std::cout << "exit ASSIGN 1" << std::endl;
                 return assignNode;
@@ -475,7 +475,7 @@ node* Parser::RO() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("<") == 0) {
         roNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         roNode->children.push_back(W());
         if(debug) std::cout << "exit RO" << std::endl;
         return roNode;
@@ -483,7 +483,7 @@ node* Parser::RO() {
     else if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(">") == 0) {
         roNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         roNode->children.push_back(T());
         if(debug) std::cout << "exit RO" << std::endl;
         return roNode;
@@ -491,7 +491,7 @@ node* Parser::RO() {
     else if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("=") == 0) {
         roNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(debug) std::cout << "exit RO" << std::endl;
         return roNode;
     }
@@ -508,14 +508,14 @@ node* Parser::W() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare("<") == 0) {
         wNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(debug) std::cout << "exit W" << std::endl;
         return wNode;
     }
     else if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(">") == 0) {
         wNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(debug) std::cout << "exit W" << std::endl;
         return wNode;
     }
@@ -530,7 +530,7 @@ node* Parser::T() {
     if(currentToken.getID() == OPERATOR_tk && currentToken.getInstance().compare(">") == 0) {
         tNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
-        currentToken.printToken();
+        //currentToken.printToken();
         if(debug) std::cout << "exit T" << std::endl;
         return tNode;
     }
