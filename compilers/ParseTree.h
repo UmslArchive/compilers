@@ -31,11 +31,12 @@ public:
 
 	//Static semantics
 	void traverseTree(node* root);
-	void processNode(node* node);
-	int varCount;
-	std::vector< std::pair<char, char> > symbolTable;
-	std::vector<int> scopedVarCounts; //to be used as stack
+	void staticSemantics(node* node);
 
+	int varCount;
+	std::vector< std::pair<std::string, std::string> > symbolTable; //<id, init_val>
+	std::vector<int> scopedVarCounts;
+	std::vector<std::string> scopedIdentifiers;
 
     void printAll(node* root);
     void printNode(node* node);

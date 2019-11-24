@@ -61,6 +61,8 @@ int main(int argc, char* argv[]) {
 
     
     testPrintParseTree(parseTree);
+
+	parseTree.traverseTree(parseTree.root);
     
 
     return 0;
