@@ -238,6 +238,7 @@ node* Parser::R() {
         return rNode;
     }
     else if(currentToken.getID() == INTEGER_tk) {
+		rNode->data.push_back("integer");
         rNode->data.push_back(currentToken.getInstance());
         currentToken = scanner.getNextToken();
         //currentToken.printToken();

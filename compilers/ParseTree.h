@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <stack>
+#include <sstream>
 
 struct node {
     std::string label;
@@ -32,11 +33,16 @@ public:
 	//Static semantics
 	void staticSemanticsTraversal(node* root);
 	void staticSemantics(node* node);
-
-	int varCount;
 	std::vector< std::pair<std::string, std::string> > symbolTable; //<id, init_val>
 	std::vector<int> scopedVarCounts;
 	std::vector<std::string> scopedIdentifiers;
+
+	//ASM Code generation
+	void codeGenTraversal(node* root);
+	void generateASM(node* anode);
+	void evaluateExpression(node* node, std::vector<std::string>& exprString);
+	void manualOverride(std::vector<std::string> exprResult);
+
 
     void printAll(node* root);
     void printNode(node* node);

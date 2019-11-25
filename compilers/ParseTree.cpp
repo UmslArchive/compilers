@@ -16,7 +16,6 @@ node::node(std::string label) :
 
 ParseTree::ParseTree() :
     indent(0), 
-	varCount(0),
 	root(NULL),
 	symbolTable(std::vector< std::pair<std::string, std::string> >()),
 	scopedVarCounts(std::vector<int>()),
@@ -86,7 +85,7 @@ void ParseTree::staticSemantics(node* node) {
 		if (numVarsInCurrentScope > 0) {
 			for (int i = programTotalDeclarations - numVarsInCurrentScope; i < programTotalDeclarations; ++i) {
 				if (node->data[0].compare(scopedIdentifiers[i]) == 0) {
-					std::cout << "ERROR: var "<< node->data[0] << " declared twice" << std::endl;
+					std::cout << "ERROR: var "<< node->data[0] << " declared multiple times" << std::endl;
 					exit(1);
 				}
 			}
@@ -148,4 +147,140 @@ void ParseTree::staticSemantics(node* node) {
 			exit(1);
 		}
 	}
+}
+
+void ParseTree::codeGenTraversal(node* root) {
+	generateASM(root);
+
+	for (int i = 0; i < root->children.size(); ++i) {
+		if (root->children[i] != NULL) {
+			codeGenTraversal(root->children[i]);
+		}
+	}
+}
+
+void ParseTree::generateASM(node* node) {
+	std::vector<std::string> exprReturn;
+	if (node->label.compare("expr") == 0) {
+		evaluateExpression(node, exprReturn);
+		for (int i = 0; i < exprReturn.size(); ++i) {
+			std::cout << exprReturn[i];
+		}
+		std::cout << std::endl;
+		manualOverride(exprReturn);
+		std::cout << std::endl;
+		exit(1);
+	}
+}
+
+void ParseTree::evaluateExpression(node* exprNode, std::vector<std::string>& exprString) {
+	if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("identifier") == 0) {
+		exprString.push_back(exprNode->data[1]);
+	}
+	else if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("integer") == 0) {
+		exprString.push_back(exprNode->data[1]);
+	}
+	else if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("[") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+	if (exprNode->label.compare("z") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+
+	if (exprNode->label.compare("x") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+
+	if (exprNode->label.compare("y") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+
+	//Recurse
+	for (int i = 0; i < exprNode->children.size(); ++i) {
+		if (exprNode->children[i] != NULL) {
+			evaluateExpression(exprNode->children[i], exprString);
+		}
+	}
+
+	if (exprNode->label.compare("r") == 0 && exprNode->data[1].compare("]") == 0) {
+		exprString.push_back(exprNode->data[1]);
+	}
+
+	return;
+}
+
+void ParseTree::manualOverride(std::vector<std::string> exprResult) {
+	int lhs, rhs;
+	std::vector<int> collapsePositions;
+	std::string converted;
+	std::ostringstream converter;
+
+	std::vector<std::string> subString;
+
+	bool collapsable = true;
+	bool bracketCollapsable = true;
+	while (collapsable) {
+		for (int i = 0; i < exprResult.size(); ++i) {
+			//Handle brackets
+			if (exprResult[i].compare("[") == 0) {
+				//save position of most recent left bracket
+				if (collapsePositions.size() > 0)
+					collapsePositions.pop_back();
+
+				collapsePositions.push_back(i);
+			}
+
+			if (exprResult[i].compare("]") == 0) {
+				//save position of right brace of inner most bracket
+				collapsePositions.push_back(i);
+
+				//Create substring from stuff in inner brackets
+				for (int i = collapsePositions[0]; i < collapsePositions[1] + 1; ++i) {
+					subString.push_back(exprResult[i]);
+				}
+
+				//Collapse substring
+				bracketCollapsable = true;
+				while (bracketCollapsable) {
+					lhs = 0;
+					rhs = 0;
+					converter.str("");
+					for (int i = 0; i < subString.size(); ++i) {
+						if (subString[i].compare("*") == 0 || subString[i].compare("/") == 0) {
+							if (subString[i].compare("*") == 0) {
+								std::istringstream(subString[i - 1]) >> lhs;
+								std::istringstream(subString[i + 1]) >> rhs;
+								converter << lhs * rhs;
+								converted = converter.str();
+								subString.insert(subString.begin() + i + 2, converted);
+								subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
+							}
+							if (subString[i].compare("/") == 0) {
+								std::istringstream(subString[i - 1]) >> lhs;
+								std::istringstream(subString[i + 1]) >> rhs;
+								converter << lhs / rhs;
+								converted = converter.str();
+								subString.insert(subString.begin() + i + 2, converted);
+								subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
+							}
+						}
+					}
+
+					if (subString.size() == 3) {
+						bracketCollapsable = false;
+					}
+				}
+
+
+				collapsable = false;
+				break;
+			}
+		}
+	}
+
+	for (int i = 0; i < subString.size(); ++i) {
+		std::cout << subString[i] << " ";
+	}
+	std::cout << std::endl;
+
 }
