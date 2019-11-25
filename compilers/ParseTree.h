@@ -12,6 +12,7 @@
 #include <vector>
 #include <stack>
 #include <sstream>
+#include <cstdlib>
 
 struct node {
     std::string label;

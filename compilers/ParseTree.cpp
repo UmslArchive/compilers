@@ -261,6 +261,10 @@ void ParseTree::manualOverride(std::vector<std::string>& exprResult) {
 					for (int i = 0; i < subString.size(); ++i) {
 						if (subString[i].compare("*") == 0 || subString[i].compare("/") == 0) {
 							if (subString[i].compare("*") == 0) {
+								if (isalpha(subString[i - 1][0]) || isalpha(subString[i + 1][0])) {
+									subString[i] = "&";
+									break;
+								}
 								std::istringstream(subString[i - 1]) >> lhs;
 								std::istringstream(subString[i + 1]) >> rhs;
 								converter << lhs * rhs;
@@ -271,6 +275,10 @@ void ParseTree::manualOverride(std::vector<std::string>& exprResult) {
 								break;
 							}
 							if (subString[i].compare("/") == 0) {
+								if (isalpha(subString[i - 1][0]) || isalpha(subString[i + 1][0])) {
+									subString[i] = "?";
+									break;
+								}
 								std::istringstream(subString[i - 1]) >> lhs;
 								std::istringstream(subString[i + 1]) >> rhs;
 								converter << lhs / rhs;
@@ -286,6 +294,10 @@ void ParseTree::manualOverride(std::vector<std::string>& exprResult) {
 					//Subtraction
 					for (int i = 0; i < subString.size(); ++i) {
 						if (subString[i].compare("-") == 0 && !didMultDiv) {
+							if (isalpha(subString[i - 1][0]) || isalpha(subString[i + 1][0])) {
+								subString[i] = "_";
+								break;
+							}
 							std::istringstream(subString[i - 1]) >> lhs;
 							std::istringstream(subString[i + 1]) >> rhs;
 							converter << lhs - rhs;
@@ -300,6 +312,17 @@ void ParseTree::manualOverride(std::vector<std::string>& exprResult) {
 					//Addition
 					for (int i = 0; i < subString.size(); ++i) {
 						if (subString[i].compare("+") == 0 && !didSub && !didMultDiv) {
+							//skip operator
+							if (isalpha(subString[i - 1][0])) {
+								subString[i] = "=";
+								break;
+							}
+
+							//Skip operator
+							if (isalpha(subString[i + 1][0])) {
+								subString[i] = "=";
+								break;
+							}
 							std::istringstream(subString[i - 1]) >> lhs;
 							std::istringstream(subString[i + 1]) >> rhs;
 							converter << lhs + rhs;
@@ -311,13 +334,43 @@ void ParseTree::manualOverride(std::vector<std::string>& exprResult) {
 						}
 					}
 
-					if (subString.size() == 3) {
+					//Scan for any remaining operators
+					bool operatorsRemain = false;
+					for (int i = 0; i < subString.size(); ++i) {
+						if (subString[i].compare("*") == 0 ||
+							subString[i].compare("-") == 0 ||
+							subString[i].compare("/") == 0 ||
+							subString[i].compare("+") == 0)
+						{
+							operatorsRemain = true;
+						}
+					}
+
+					if (!operatorsRemain) {
 						bracketCollapsable = false;
 					}
 				}
 
+				//Replace operator fillers in substring
+				for (int i = 0; i < subString.size(); ++i) {
+					if (subString[i].compare("=") == 0) {
+						subString[i] = "+";
+					}
+					if (subString[i].compare("_") == 0) {
+						subString[i] = "-";
+					}
+					if (subString[i].compare("?") == 0) {
+						subString[i] = "/";
+					}
+					if (subString[i].compare("&") == 0) {
+						subString[i] = "*";
+					}
+				}
+
 				//Replace bracketed expression with substring
-				exprResult.insert(exprResult.begin() + collapsePositions[1] + 1, subString[1]);
+				for (int i = 1; i < subString.size() - 1; ++i) {
+					exprResult.insert(exprResult.begin() + collapsePositions[1] + i, subString[i]);
+				}
 				exprResult.erase(exprResult.begin() + collapsePositions[0], exprResult.begin() + collapsePositions[1] + 1);
 				collapsePositions.clear();
 
