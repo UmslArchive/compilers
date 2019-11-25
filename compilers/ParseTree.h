@@ -41,7 +41,7 @@ public:
 	void codeGenTraversal(node* root);
 	void generateASM(node* anode);
 	void evaluateExpression(node* node, std::vector<std::string>& exprString);
-	void manualOverride(std::vector<std::string> exprResult);
+	void manualOverride(std::vector<std::string>& exprResult);
 
 
     void printAll(node* root);

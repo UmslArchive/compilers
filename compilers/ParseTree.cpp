@@ -209,20 +209,28 @@ void ParseTree::evaluateExpression(node* exprNode, std::vector<std::string>& exp
 	return;
 }
 
-void ParseTree::manualOverride(std::vector<std::string> exprResult) {
+void ParseTree::manualOverride(std::vector<std::string>& exprResult) {
 	int lhs, rhs;
 	std::vector<int> collapsePositions;
 	std::string converted;
 	std::ostringstream converter;
+	std::vector<std::string> opOrder;
 
 	std::vector<std::string> subString;
 
+
+	//Handle brackets
 	bool collapsable = true;
 	bool bracketCollapsable = true;
+	bool foundBracket = false;
+	bool didMultDiv = false;
+	bool didSub = false;
+	bool didAdd = false;
 	while (collapsable) {
+		foundBracket = false;
 		for (int i = 0; i < exprResult.size(); ++i) {
-			//Handle brackets
 			if (exprResult[i].compare("[") == 0) {
+				foundBracket = true;
 				//save position of most recent left bracket
 				if (collapsePositions.size() > 0)
 					collapsePositions.pop_back();
@@ -245,6 +253,11 @@ void ParseTree::manualOverride(std::vector<std::string> exprResult) {
 					lhs = 0;
 					rhs = 0;
 					converter.str("");
+					didMultDiv = false;
+					didSub = false;
+					didAdd = false;
+
+					//Multiplication and division
 					for (int i = 0; i < subString.size(); ++i) {
 						if (subString[i].compare("*") == 0 || subString[i].compare("/") == 0) {
 							if (subString[i].compare("*") == 0) {
@@ -254,6 +267,8 @@ void ParseTree::manualOverride(std::vector<std::string> exprResult) {
 								converted = converter.str();
 								subString.insert(subString.begin() + i + 2, converted);
 								subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
+								didMultDiv = true;
+								break;
 							}
 							if (subString[i].compare("/") == 0) {
 								std::istringstream(subString[i - 1]) >> lhs;
@@ -262,7 +277,37 @@ void ParseTree::manualOverride(std::vector<std::string> exprResult) {
 								converted = converter.str();
 								subString.insert(subString.begin() + i + 2, converted);
 								subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
+								didMultDiv = true;
+								break;
 							}
+						}
+					}
+
+					//Subtraction
+					for (int i = 0; i < subString.size(); ++i) {
+						if (subString[i].compare("-") == 0 && !didMultDiv) {
+							std::istringstream(subString[i - 1]) >> lhs;
+							std::istringstream(subString[i + 1]) >> rhs;
+							converter << lhs - rhs;
+							converted = converter.str();
+							subString.insert(subString.begin() + i + 2, converted);
+							subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
+							didSub = true;
+							break;
+						}
+					}
+
+					//Addition
+					for (int i = 0; i < subString.size(); ++i) {
+						if (subString[i].compare("+") == 0 && !didSub && !didMultDiv) {
+							std::istringstream(subString[i - 1]) >> lhs;
+							std::istringstream(subString[i + 1]) >> rhs;
+							converter << lhs + rhs;
+							converted = converter.str();
+							subString.insert(subString.begin() + i + 2, converted);
+							subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
+							didAdd = true;
+							break;
 						}
 					}
 
@@ -271,16 +316,31 @@ void ParseTree::manualOverride(std::vector<std::string> exprResult) {
 					}
 				}
 
+				//Replace bracketed expression with substring
+				exprResult.insert(exprResult.begin() + collapsePositions[1] + 1, subString[1]);
+				exprResult.erase(exprResult.begin() + collapsePositions[0], exprResult.begin() + collapsePositions[1] + 1);
+				collapsePositions.clear();
 
-				collapsable = false;
+				//break the exprResult for loop
 				break;
 			}
 		}
-	}
 
-	for (int i = 0; i < subString.size(); ++i) {
-		std::cout << subString[i] << " ";
+		for (int i = 0; i < subString.size(); ++i) {
+			std::cout << subString[i] << " ";
+		}
+		std::cout << std::endl;
+
+		subString.clear();
+
+		for (int i = 0; i < exprResult.size(); ++i) {
+			std::cout << exprResult[i] << " ";
+		}
+		std::cout << std::endl;
+
+		if (!foundBracket) {
+			collapsable = false;
+		}
 	}
-	std::cout << std::endl;
 
 }
