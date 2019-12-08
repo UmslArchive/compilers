@@ -41,12 +41,15 @@ public:
 	//ASM Code generation
 	void codeGenTraversal(node* root);
 	void generateASM(node* anode);
-	void evaluateExpression(node* node, std::vector<std::string>& exprString);
-	void manualOverride(std::vector<std::string>& exprResult);
+	int evaluateExpression(node* exprNode);
+	std::vector<std::string> exprStack;
+	//void evaluateExpression(node* node, std::vector<std::string>& exprString);
+	//void manualOverride(std::vector<std::string>& exprResult);
 
 
     void printAll(node* root);
     void printNode(node* node);
+
 };
 
 #endif
