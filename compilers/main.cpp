@@ -67,6 +67,8 @@ int main(int argc, char* argv[]) {
 
 	parseTree.codeGenTraversal(parseTree.root);
 
+	parseTree.printUsedVars();
+
     return 0;
 }
 

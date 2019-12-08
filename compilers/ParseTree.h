@@ -42,10 +42,14 @@ public:
 	void codeGenTraversal(node* root);
 	void generateASM(node* anode);
 	int evaluateExpression(node* exprNode);
-	std::vector<std::string> exprStack;
+	std::vector< std::vector<std::string> > exprStack;
+
+	int skipCount;
+	int tempCount;
 	//void evaluateExpression(node* node, std::vector<std::string>& exprString);
 	//void manualOverride(std::vector<std::string>& exprResult);
 
+	void printUsedVars();
 
     void printAll(node* root);
     void printNode(node* node);

@@ -20,7 +20,9 @@ ParseTree::ParseTree() :
 	symbolTable(std::vector< std::pair<std::string, std::string> >()),
 	scopedVarCounts(std::vector<int>()),
 	scopedIdentifiers(std::vector<std::string>()),
-	exprStack(std::vector<std::string>())
+	exprStack(1, std::vector<std::string>()),
+	skipCount(0),
+	tempCount(0)
 {}
 
 void ParseTree::printNode(node* node) {
@@ -163,7 +165,100 @@ void ParseTree::generateASM(node* node) {
 	int exprVal;
 	if (node->label.compare("out") == 0) {
 		exprVal = evaluateExpression(node->children[0]);
+		std::cout << "WRITE " << exprVal << std::endl;
 	}
+
+	if (node->label.compare("in") == 0) {
+		std::cout << "READ " << node->data[1];
+	}
+
+	if (node->label.compare("if") == 0) {
+		//Evaluate expressions
+		int lhs = evaluateExpression(node->children[0]);
+		int rhs = evaluateExpression(node->children[2]);
+		
+		//Get relational operator
+		std::string relate = "";
+		relate.append(node->children[1]->data[0]);
+		if (node->children[1]->children.size() > 0 && node->children[1]->children[0] != NULL) {
+			relate.append(node->children[1]->children[0]->data[0]);
+		}
+
+		if (relate.compare("<") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRPOS SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare(">") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRNEG SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare("=") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRNEG SKIP" << skipCount << std::endl
+				<< "BRPOS SKIP" << skipCount << std::endl;
+				
+		}
+
+		if (relate.compare("<<") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRZPOS SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare("<>") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRZERO SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare(">>") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRZNEG SKIP" << skipCount << std::endl;
+		}
+
+		tempCount++;
+
+		//Generate the stmt
+		for (int i = 0; i < node->children[3]->children.size(); ++i) {
+			if (node->children[3]->children[i] != NULL) {
+				generateASM(node->children[3]->children[i]);
+				node->children[3]->children[i] = NULL;
+				break;
+			}
+		}
+
+		std::cout << "SKIP" << skipCount << ":NOOP" << std::endl;
+
+		skipCount++;
+
+	}
+
+	if (node->label.compare("assign") == 0) {
+
+	}
+
+	if (node->label.compare("loop") == 0) {
+
+	}
+	
 }
 
 int ParseTree::evaluateExpression(node* exprNode) {
@@ -171,81 +266,72 @@ int ParseTree::evaluateExpression(node* exprNode) {
 	std::stringstream converter;
 	std::stringstream converter2;
 	std::stringstream result;
+	static int stackLevel = 0;
 	
 	int lhs, rhs;
 
-	std::cout << exprNode->label << std::endl;
+	//std::cout << exprNode->label << std::endl;
 
 	if (exprNode->label.compare("r") == 0) {
 		if (exprNode->data[0].compare("integer") == 0) {
-			std::cout << "pushing " << exprNode->data[1] << std::endl;
-			exprStack.push_back(exprNode->data[1]);
+			//std::cout << "pushing " << exprNode->data[1] << std::endl;
+			exprStack[stackLevel].push_back(exprNode->data[1]);
+			converter.str(exprNode->data[1]);
+			converter >> val;
 		}
-
-		//Evaluate a sub expr
-		if (exprStack.size() == 3) {
-			converter.str(exprStack.front());
-			converter >> lhs;
-			converter2.str(exprStack.back());
-			converter2 >> rhs;
-
-			if (exprStack[1].compare("/") == 0) {
-				val = lhs / rhs;
-				std::cout << lhs << "/" << rhs << "=" << val << std::endl;
+		else if (exprNode->data[0].compare("identifier") == 0) {
+			for (int i = 0; i < symbolTable.size(); ++i) {
+				if (symbolTable[i].first.compare(exprNode->data[1]) == 0) {
+					//std::cout << "pushing " << symbolTable[i].second << std::endl;
+					exprStack[stackLevel].push_back(symbolTable[i].second);
+					converter.str(symbolTable[i].second);
+					converter >> val;
+				}
 			}
-
-			if (exprStack[1].compare("*") == 0) {
-				val = lhs * rhs;
-				std::cout << lhs << "*" << rhs << "=" << val << std::endl;
-			}
-
-			if (exprStack[1].compare("+") == 0) {
-				val = lhs + rhs;
-				std::cout << lhs << "+" << rhs << "=" << val << std::endl;
-			}
-
-			if (exprStack[1].compare("-") == 0) {
-				val = lhs - rhs;
-				std::cout << lhs << "-" << rhs << "=" << val << std::endl;
-			}
-
-			exprStack.clear();
-			result << val;
-			exprStack.push_back(result.str());
 		}
 	}
 	else if (exprNode->label.compare("z") == 0) {
+		//std::cout << "pushing +" << std::endl;
+		exprStack[stackLevel].push_back("+");
+
+		exprStack.resize(exprStack.size() + 1);
+		stackLevel++;
+
 		evaluateExpression(exprNode->children[0]);
-		std::cout << "pushing +" << std::endl;
-		exprStack.push_back("+");
+
+		if (exprStack[stackLevel].size() == 1 && stackLevel > 0) {
+			exprStack[stackLevel - 1].push_back(exprStack[stackLevel][0]);
+			stackLevel--;
+			exprStack.pop_back();
+		}
 	}
 	else if (exprNode->label.compare("y") == 0) {
-		std::cout << "pushing -" << std::endl;
-		exprStack.push_back("-");
+		//std::cout << "pushing -" << std::endl;
+		exprStack[stackLevel].push_back("-");
+
 		evaluateExpression(exprNode->children[0]);
+
+		/*exprStack.resize(exprStack.size() + 1);
+		stackLevel++;*/
+
 	}
 	else if (exprNode->label.compare("x") == 0) {
-		std::cout << "pushing " << exprNode->data[0] << std::endl;
-		exprStack.push_back(exprNode->data[0]);
+		//std::cout << "pushing " << exprNode->data[0] << std::endl;
+		exprStack[stackLevel].push_back(exprNode->data[0]);
+
 		evaluateExpression(exprNode->children[0]);
 	}
 	else if (exprNode->label.compare("expr") == 0) {
-		if (exprNode->children[1] != NULL) {
-			evaluateExpression(exprNode->children[1]);
-		}
-
 		if (exprNode->children[0] != NULL) {
 			evaluateExpression(exprNode->children[0]);
+		}
+
+		if (exprNode->children[1] != NULL) {
+			evaluateExpression(exprNode->children[1]);
 		}
 	}
 	else {
 		//Right to left traversal
-		/*for (int i = exprNode->children.size() - 1; i >= 0; --i) {
-			if (exprNode->children[i] != NULL) {
-				evaluateExpression(exprNode->children[i]);
-			}
-		}*/
-
 		for (int i = 0; i < exprNode->children.size(); ++i) {
 			if (exprNode->children[i] != NULL) {
 				evaluateExpression(exprNode->children[i]);
@@ -253,7 +339,60 @@ int ParseTree::evaluateExpression(node* exprNode) {
 		}
 	}
 
+	//Evaluate a sub expr
+	if (exprStack[stackLevel].size() == 3) {
+		converter.str(exprStack[stackLevel].front());
+		converter >> lhs;
+		converter2.str(exprStack[stackLevel].back());
+		converter2 >> rhs;
+
+		if (exprStack[stackLevel][1].compare("/") == 0) {
+			val = lhs / rhs;
+			//std::cout << lhs << "/" << rhs << "=" << val << std::endl;
+		}
+
+		if (exprStack[stackLevel][1].compare("*") == 0) {
+			val = lhs * rhs;
+			//std::cout << lhs << "*" << rhs << "=" << val << std::endl;
+		}
+
+		if (exprStack[stackLevel][1].compare("+") == 0) {
+			val = lhs + rhs;
+			//std::cout << lhs << "+" << rhs << "=" << val << std::endl;
+		}
+
+		if (exprStack[stackLevel][1].compare("-") == 0) {
+			val = lhs - rhs;
+			//std::cout << lhs << "-" << rhs << "=" << val << std::endl;
+		}
+
+		if (stackLevel > 0) {
+			exprStack.pop_back();
+			stackLevel--;
+			result << val;
+			exprStack[stackLevel].push_back(result.str());
+		}
+		else {
+			exprStack[stackLevel].clear();
+			result << val;
+			exprStack[stackLevel].push_back(result.str());
+		}
+		
+	}
+
 	return val;
+}
+
+void ParseTree::printUsedVars() {
+	std::cout << "STOP" << std::endl;
+
+	for (int i = 0; i < tempCount; ++i) {
+		std::cout << "TEMP" << i << " 0" << std::endl;
+	}
+
+	for (int i = 0; i < symbolTable.size(); ++i) {
+		std::cout << symbolTable[i].first << " " << symbolTable[i].second << std::endl;
+	}
 }
 
 //void ParseTree::evaluateExpression(node* exprNode, std::vector<std::string>& exprString) {
