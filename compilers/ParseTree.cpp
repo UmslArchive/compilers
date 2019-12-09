@@ -327,6 +327,10 @@ void ParseTree::generateASM(node* node) {
 void ParseTree::evaluateExpression() {
 
 	std::stringstream converter;
+	bool didCollapse = false;
+	bool moreBrackets = true;
+	int orderOfOps = 0;
+	bool didAll = false;
 	
 	//5 indices point to something like this:
 	//	[ x + 3 ]	OR	[ x + 3 * 7 ]
@@ -346,18 +350,22 @@ void ParseTree::evaluateExpression() {
 	int rhs = 0;
 	int result = 0;
 
-	//Scan for innermost, left bracket
-	for (int i = 0; i < exprString.size(); ++i) {
+	//Scan for a pair of brackets
+	bool foundPair = false;
+	for (int i = 0; i < exprString.size() && !foundPair; ++i) {
 		if (exprString[i].compare("[") == 0) {
 			leftSquare = i;
-		}
-	}
+			for (int j = i + 1; j < exprString.size(); ++j) {
+				if (exprString[j].compare("[") == 0) {
+					break;
+				}
 
-	//Scan for innermost, right bracket
-	for (int i = 0; i < exprString.size(); ++i) {
-		if (exprString[i].compare("]") == 0) {
-			rightSquare = i;
-			break;
+				if (exprString[j].compare("]") == 0) {
+					rightSquare = j;
+					foundPair = true;
+					break;
+				}
+			}
 		}
 	}
 
@@ -367,9 +375,11 @@ void ParseTree::evaluateExpression() {
 	rightSub = leftSquare + 3;
 
 	//Scan for multiplication and division
-	while(exprString[rightSub].compare("]") != 0) {
+	while (moreBrackets || !didAll) {
+		didCollapse = false;
+		moreBrackets = false;
 
-		if (exprString[midSub].compare("*") == 0 || exprString[midSub].compare("/") == 0) {
+		if ((exprString[midSub].compare("*") == 0 || exprString[midSub].compare("/") == 0) && orderOfOps == 0) {
 
 			//sub expr is multiplication
 			if (exprString[midSub].compare("*") == 0) {
@@ -416,24 +426,256 @@ void ParseTree::evaluateExpression() {
 				exprString.erase(exprString.begin() + rightSub);
 				exprString.erase(exprString.begin() + midSub);
 				exprString[leftSub] = converter.str();
+				didCollapse = true;
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+			}
+
+			//sub expr is division
+			else if (exprString[midSub].compare("/") == 0) {
+				//lhs
+				if (tokenIsIdentifier(exprString[leftSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> lhs;
+						}
+					}
+				}
+				else {
+					converter.str(exprString[leftSub]);
+					converter >> lhs;
+				}
 
 				//Reset converter
 				converter.str("");
 				converter.clear();
 
-				
-			}
+				//rhs
+				if (tokenIsIdentifier(exprString[rightSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> rhs;
+						}
+					}
+				}
+				else {
+					converter.str(exprString[rightSub]);
+					converter >> rhs;
+				}
 
-			//sub expr is division
-			else if (exprString[midSub].compare("/") == 0) {
+				//Reset converter
+				converter.str("");
+				converter.clear();
 
+				//Collapse
+				result = lhs / rhs;
+				converter << result;
+				exprString.erase(exprString.begin() + rightSub);
+				exprString.erase(exprString.begin() + midSub);
+				exprString[leftSub] = converter.str();
+				didCollapse = true;
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
 			}
 		}
 
-		//Move iterators
-		leftSub++;
-		midSub++;
-		rightSub++;
+		//Subtraction
+		else if (exprString[midSub].compare("-") == 0 && orderOfOps == 1) {
+			//lhs
+			if (tokenIsIdentifier(exprString[leftSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> lhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[leftSub]);
+				converter >> lhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//rhs
+			if (tokenIsIdentifier(exprString[rightSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> rhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[rightSub]);
+				converter >> rhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//Collapse
+			result = lhs - rhs;
+			converter << result;
+			exprString.erase(exprString.begin() + rightSub);
+			exprString.erase(exprString.begin() + midSub);
+			exprString[leftSub] = converter.str();
+			didCollapse = true;
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+		}
+
+		//Addition
+		else if (exprString[midSub].compare("+") == 0 && orderOfOps == 2) {
+			//lhs
+			if (tokenIsIdentifier(exprString[leftSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> lhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[leftSub]);
+				converter >> lhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//rhs
+			if (tokenIsIdentifier(exprString[rightSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> rhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[rightSub]);
+				converter >> rhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//Collapse
+			result = lhs + rhs;
+			converter << result;
+			exprString.erase(exprString.begin() + rightSub);
+			exprString.erase(exprString.begin() + midSub);
+			exprString[leftSub] = converter.str();
+			didCollapse = true;
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+		}
+
+		//-----
+
+		//Rescan for brackets
+		if (didCollapse) {
+			//Rescan
+			foundPair = false;
+			for (int i = 0; i < exprString.size() && !foundPair; ++i) {
+				if (exprString[i].compare("[") == 0) {
+					leftSquare = i;
+					for (int j = i + 1; j < exprString.size(); ++j) {
+						if (exprString[j].compare("[") == 0) {
+							break;
+						}
+
+						if (exprString[j].compare("]") == 0) {
+							rightSquare = j;
+							foundPair = true;
+							moreBrackets = true;
+							break;
+						}
+					}
+				}
+			}
+
+			//This pair of brackets can collapse no further
+			if (moreBrackets && rightSquare - leftSquare == 2) {
+				exprString.erase(exprString.begin() + rightSquare);
+				exprString.erase(exprString.begin() + leftSquare);
+
+				moreBrackets = false;
+
+				foundPair = false;
+				for (int i = 0; i < exprString.size() && !foundPair; ++i) {
+					if (exprString[i].compare("[") == 0) {
+						leftSquare = i;
+						for (int j = i + 1; j < exprString.size(); ++j) {
+							if (exprString[j].compare("[") == 0) {
+								break;
+							}
+
+							if (exprString[j].compare("]") == 0) {
+								rightSquare = j;
+								foundPair = true;
+								moreBrackets = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+			
+			if (moreBrackets && rightSquare - leftSquare > 2) {
+				leftSub = leftSquare + 1;
+				midSub = leftSquare + 2;
+				rightSub = leftSquare + 3;
+			}
+		}
+		else if (exprString[rightSub].compare("]") == 0) {
+			foundPair = false;
+			for (int i = 0; i < exprString.size() && !foundPair; ++i) {
+				if (exprString[i].compare("[") == 0) {
+					leftSquare = i;
+					for (int j = i + 1; j < exprString.size(); ++j) {
+						if (exprString[j].compare("[") == 0) {
+							break;
+						}
+
+						if (exprString[j].compare("]") == 0) {
+							rightSquare = j;
+							foundPair = true;
+							moreBrackets = true;
+							break;
+						}
+					}
+				}
+			}
+
+			leftSub = leftSquare + 1;
+			midSub = leftSquare + 2;
+			rightSub = leftSquare + 3;
+
+			orderOfOps++;
+		}
+		else {
+			//Move iterators
+			leftSub++;
+			midSub++;
+			rightSub++;
+		}
 	}
 
 	return;
