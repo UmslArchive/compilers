@@ -22,7 +22,8 @@ ParseTree::ParseTree() :
 	scopedIdentifiers(std::vector<std::string>()),
 	exprStack(1, std::vector<std::string>()),
 	skipCount(0),
-	tempCount(0)
+	tempCount(0),
+	exprString(std::vector<std::string>())
 {}
 
 void ParseTree::printNode(node* node) {
@@ -162,13 +163,18 @@ void ParseTree::codeGenTraversal(node* root) {
 }
 
 void ParseTree::generateASM(node* node) {
-	int exprVal;
-	int lhs, rhs;
+	int exprVal = 0;
+	int lhs = 0;
+	int rhs = 0;
 	std::stringstream converter;
+	static bool prevCondTrue = false;
+	static bool inConditional = false;
 
 	if (node->label.compare("out") == 0) {
-		exprVal = evaluateExpression(node->children[0]);
-		std::cout << "WRITE " << exprVal << std::endl;
+		getExprString(node->children[0]);
+		evaluateExpression();
+		exprString.clear();
+		std::cout << "STORE TEMP" << exprVal << std::endl;
 	}
 
 	if (node->label.compare("in") == 0) {
@@ -176,9 +182,18 @@ void ParseTree::generateASM(node* node) {
 	}
 
 	if (node->label.compare("if") == 0) {
-		//Evaluate expressions
-		lhs = evaluateExpression(node->children[0]);
-		rhs = evaluateExpression(node->children[2]);
+		inConditional = true;
+		//Evaluate expressions:
+
+		//LHS
+		getExprString(node->children[0]);
+		evaluateExpression();
+		exprString.clear();
+
+		//RHS
+		getExprString(node->children[2]);
+		evaluateExpression();
+		exprString.clear();
 		
 		//Get relational operator
 		std::string relate = "";
@@ -188,6 +203,10 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<") == 0) {
+			if (lhs < rhs) {
+				prevCondTrue = true;
+			}
+
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -196,6 +215,10 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare(">") == 0) {
+			if (lhs > rhs) {
+				prevCondTrue = true;
+			}
+
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -204,6 +227,10 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("=") == 0) {
+			if (lhs == rhs) {
+				prevCondTrue = true;
+			}
+
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -214,6 +241,10 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<<") == 0) {
+			if (lhs <= rhs) {
+				prevCondTrue = true;
+			}
+
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -222,6 +253,10 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<>") == 0) {
+			if (lhs != rhs) {
+				prevCondTrue = true;
+			}
+
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -230,6 +265,10 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare(">>") == 0) {
+			if (lhs >= rhs) {
+				prevCondTrue = true;
+			}
+
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -252,18 +291,24 @@ void ParseTree::generateASM(node* node) {
 
 		skipCount++;
 
+		inConditional = false;
+		prevCondTrue = false;
+
 	}
 
 	if (node->label.compare("assign") == 0) {
-		exprVal = evaluateExpression(node->children[0]);
+		
+		getExprString(node->children[0]);
+		evaluateExpression();
+		exprString.clear();
 		std::cout << "LOAD " << exprVal << std::endl
 			<< "STORE " << node->data[0] << std::endl;
 
 		//Update symbol table
 		for (int i = 0; i < symbolTable.size(); ++i) {
-			if (symbolTable[i].first.compare(node->data[0]) == 0) {
+			if (symbolTable[i].first.compare(node->data[0]) == 0 && ((inConditional && prevCondTrue) || !inConditional)) {
 				converter << exprVal;
-				converter << symbolTable[i].second;
+				symbolTable[i].second = converter.str();
 			}
 		}
 	}
@@ -274,127 +319,290 @@ void ParseTree::generateASM(node* node) {
 	
 }
 
-int ParseTree::evaluateExpression(node* exprNode) {
-	static int val = 0;
+//Function leaves evaluated expression value on the accumulator.
+//I absolutely could not get expression parsing to work correctly using the tree
+//tree traversal method, so this is something of a manual override which
+//parses the expr left to right, then manually does order of operations using 
+//iterators.
+void ParseTree::evaluateExpression() {
+
 	std::stringstream converter;
-	std::stringstream converter2;
-	std::stringstream result;
-	static int stackLevel = 0;
 	
-	int lhs, rhs;
+	//5 indices point to something like this:
+	//	[ x + 3 ]	OR	[ x + 3 * 7 ]
+	//	^ ^ ^ ^ ^		^     ^ ^ ^ ^
+	//
+	//the outer iterators hold the range between brackets or entire expr if
+	//no brackets.
+	//The inner iterators hold a sub expression which gets collapsed leaving the
+	//result on the accumulator
+	int leftSquare = 0;
+	int leftSub = 0;
+	int midSub = 0;
+	int rightSub = 0;
+	int rightSquare = 0;
 
-	//std::cout << exprNode->label << std::endl;
+	int lhs = 0;
+	int rhs = 0;
+	int result = 0;
 
-	if (exprNode->label.compare("r") == 0) {
-		if (exprNode->data[0].compare("integer") == 0) {
-			//std::cout << "pushing " << exprNode->data[1] << std::endl;
-			exprStack[stackLevel].push_back(exprNode->data[1]);
-			converter.str(exprNode->data[1]);
-			converter >> val;
+	//Scan for innermost, left bracket
+	for (int i = 0; i < exprString.size(); ++i) {
+		if (exprString[i].compare("[") == 0) {
+			leftSquare = i;
 		}
-		else if (exprNode->data[0].compare("identifier") == 0) {
-			for (int i = 0; i < symbolTable.size(); ++i) {
-				if (symbolTable[i].first.compare(exprNode->data[1]) == 0) {
-					//std::cout << "pushing " << symbolTable[i].second << std::endl;
-					exprStack[stackLevel].push_back(symbolTable[i].second);
-					converter.str(symbolTable[i].second);
-					converter >> val;
+	}
+
+	//Scan for innermost, right bracket
+	for (int i = 0; i < exprString.size(); ++i) {
+		if (exprString[i].compare("]") == 0) {
+			rightSquare = i;
+			break;
+		}
+	}
+
+	//Set the subexpression iterators inside the square brackets
+	leftSub = leftSquare + 1;
+	midSub = leftSquare + 2;
+	rightSub = leftSquare + 3;
+
+	//Scan for multiplication and division
+	while(exprString[rightSub].compare("]") != 0) {
+
+		if (exprString[midSub].compare("*") == 0 || exprString[midSub].compare("/") == 0) {
+
+			//sub expr is multiplication
+			if (exprString[midSub].compare("*") == 0) {
+
+				//lhs
+				if (tokenIsIdentifier(exprString[leftSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> lhs;
+						}
+					}
 				}
+				else {
+					converter.str(exprString[leftSub]);
+					converter >> lhs;
+				}
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+
+				//rhs
+				if (tokenIsIdentifier(exprString[rightSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> rhs;
+						}
+					}
+				}
+				else {
+					converter.str(exprString[rightSub]);
+					converter >> rhs;
+				}
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+
+				//Collapse
+				result = lhs * rhs;
+				converter << result;
+				exprString.erase(exprString.begin() + rightSub);
+				exprString.erase(exprString.begin() + midSub);
+				exprString[leftSub] = converter.str();
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+
+				
+			}
+
+			//sub expr is division
+			else if (exprString[midSub].compare("/") == 0) {
+
 			}
 		}
-	}
-	else if (exprNode->label.compare("z") == 0) {
-		//std::cout << "pushing +" << std::endl;
-		exprStack[stackLevel].push_back("+");
 
-		exprStack.resize(exprStack.size() + 1);
-		stackLevel++;
-
-		evaluateExpression(exprNode->children[0]);
-
-		if (exprStack[stackLevel].size() == 1 && stackLevel > 0) {
-			exprStack[stackLevel - 1].push_back(exprStack[stackLevel][0]);
-			stackLevel--;
-			exprStack.pop_back();
-		}
-	}
-	else if (exprNode->label.compare("y") == 0) {
-		//std::cout << "pushing -" << std::endl;
-		exprStack[stackLevel].push_back("-");
-
-		evaluateExpression(exprNode->children[0]);
-
-		/*exprStack.resize(exprStack.size() + 1);
-		stackLevel++;*/
-
-	}
-	else if (exprNode->label.compare("x") == 0) {
-		//std::cout << "pushing " << exprNode->data[0] << std::endl;
-		exprStack[stackLevel].push_back(exprNode->data[0]);
-
-		evaluateExpression(exprNode->children[0]);
-	}
-	else if (exprNode->label.compare("expr") == 0) {
-		if (exprNode->children[0] != NULL) {
-			evaluateExpression(exprNode->children[0]);
-		}
-
-		if (exprNode->children[1] != NULL) {
-			evaluateExpression(exprNode->children[1]);
-		}
-	}
-	else {
-		//Right to left traversal
-		for (int i = 0; i < exprNode->children.size(); ++i) {
-			if (exprNode->children[i] != NULL) {
-				evaluateExpression(exprNode->children[i]);
-			}
-		}
+		//Move iterators
+		leftSub++;
+		midSub++;
+		rightSub++;
 	}
 
-	//Evaluate a sub expr
-	if (exprStack[stackLevel].size() == 3) {
-		converter.str(exprStack[stackLevel].front());
-		converter >> lhs;
-		converter2.str(exprStack[stackLevel].back());
-		converter2 >> rhs;
-
-		if (exprStack[stackLevel][1].compare("/") == 0) {
-			val = lhs / rhs;
-			//std::cout << lhs << "/" << rhs << "=" << val << std::endl;
-		}
-
-		if (exprStack[stackLevel][1].compare("*") == 0) {
-			val = lhs * rhs;
-			//std::cout << lhs << "*" << rhs << "=" << val << std::endl;
-		}
-
-		if (exprStack[stackLevel][1].compare("+") == 0) {
-			val = lhs + rhs;
-			//std::cout << lhs << "+" << rhs << "=" << val << std::endl;
-		}
-
-		if (exprStack[stackLevel][1].compare("-") == 0) {
-			val = lhs - rhs;
-			//std::cout << lhs << "-" << rhs << "=" << val << std::endl;
-		}
-
-		if (stackLevel > 0) {
-			exprStack.pop_back();
-			stackLevel--;
-			result << val;
-			exprStack[stackLevel].push_back(result.str());
-		}
-		else {
-			exprStack[stackLevel].clear();
-			result << val;
-			exprStack[stackLevel].push_back(result.str());
-		}
-		
-	}
-
-	return val;
+	return;
 }
+
+bool ParseTree::tokenIsIdentifier(std::string token) {
+	//first char is a-z
+	if (token[0] >= 97 && token[0] <= 122)
+		return true;
+	return false;
+}
+
+void ParseTree::getExprString(node* exprNode) {
+	if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("identifier") == 0) {
+		exprString.push_back(exprNode->data[1]);
+	}
+	else if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("integer") == 0) {
+		exprString.push_back(exprNode->data[1]);
+	}
+	else if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("[") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+	if (exprNode->label.compare("z") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+		
+	if (exprNode->label.compare("x") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+		
+	if (exprNode->label.compare("y") == 0) {
+		exprString.push_back(exprNode->data[0]);
+	}
+		
+	//Recurse
+	for (int i = 0; i < exprNode->children.size(); ++i) {
+		if (exprNode->children[i] != NULL) {
+			getExprString(exprNode->children[i]);
+		}
+	}
+		
+	if (exprNode->label.compare("r") == 0 && exprNode->data[1].compare("]") == 0) {
+		exprString.push_back(exprNode->data[1]);
+	}
+		
+	return;
+}
+
+//int ParseTree::evaluateExpression(node* exprNode) {
+//	static int val = 0;
+//	std::stringstream converter;
+//	std::stringstream converter2;
+//	std::stringstream result;
+//	static int stackLevel = 0;
+//	
+//	int lhs, rhs;
+//
+//	//std::cout << exprNode->label << std::endl;
+//
+//	if (exprNode->label.compare("r") == 0) {
+//		if (exprNode->data[0].compare("integer") == 0) {
+//			//std::cout << "pushing " << exprNode->data[1] << std::endl;
+//			exprStack[stackLevel].push_back(exprNode->data[1]);
+//			converter.str(exprNode->data[1]);
+//			converter >> val;
+//		}
+//		else if (exprNode->data[0].compare("identifier") == 0) {
+//			for (int i = 0; i < symbolTable.size(); ++i) {
+//				if (symbolTable[i].first.compare(exprNode->data[1]) == 0) {
+//					//std::cout << "pushing " << symbolTable[i].second << std::endl;
+//					exprStack[stackLevel].push_back(symbolTable[i].second);
+//					converter.str(symbolTable[i].second);
+//					converter >> val;
+//				}
+//			}
+//		}
+//	}
+//	else if (exprNode->label.compare("z") == 0) {
+//		//std::cout << "pushing +" << std::endl;
+//		exprStack[stackLevel].push_back("+");
+//
+//		exprStack.resize(exprStack.size() + 1);
+//		stackLevel++;
+//
+//		evaluateExpression(exprNode->children[0]);
+//
+//		if (exprStack[stackLevel].size() == 1 && stackLevel > 0) {
+//			exprStack[stackLevel - 1].push_back(exprStack[stackLevel][0]);
+//			stackLevel--;
+//			exprStack.pop_back();
+//		}
+//	}
+//	else if (exprNode->label.compare("y") == 0) {
+//		//std::cout << "pushing -" << std::endl;
+//		exprStack[stackLevel].push_back("-");
+//
+//		evaluateExpression(exprNode->children[0]);
+//
+//		/*exprStack.resize(exprStack.size() + 1);
+//		stackLevel++;*/
+//
+//	}
+//	else if (exprNode->label.compare("x") == 0) {
+//		//std::cout << "pushing " << exprNode->data[0] << std::endl;
+//		exprStack[stackLevel].push_back(exprNode->data[0]);
+//
+//		evaluateExpression(exprNode->children[0]);
+//	}
+//	else if (exprNode->label.compare("expr") == 0) {
+//		if (exprNode->children[0] != NULL) {
+//			evaluateExpression(exprNode->children[0]);
+//		}
+//
+//		if (exprNode->children[1] != NULL) {
+//			evaluateExpression(exprNode->children[1]);
+//		}
+//	}
+//	else {
+//		//Right to left traversal
+//		for (int i = 0; i < exprNode->children.size(); ++i) {
+//			if (exprNode->children[i] != NULL) {
+//				evaluateExpression(exprNode->children[i]);
+//			}
+//		}
+//	}
+//
+//	//Evaluate a sub expr
+//	if (exprStack[stackLevel].size() == 3) {
+//		converter.str(exprStack[stackLevel].front());
+//		converter >> lhs;
+//		converter2.str(exprStack[stackLevel].back());
+//		converter2 >> rhs;
+//
+//		if (exprStack[stackLevel][1].compare("/") == 0) {
+//			val = lhs / rhs;
+//			//std::cout << lhs << "/" << rhs << "=" << val << std::endl;
+//		}
+//
+//		if (exprStack[stackLevel][1].compare("*") == 0) {
+//			val = lhs * rhs;
+//			//std::cout << lhs << "*" << rhs << "=" << val << std::endl;
+//		}
+//
+//		if (exprStack[stackLevel][1].compare("+") == 0) {
+//			val = lhs + rhs;
+//			//std::cout << lhs << "+" << rhs << "=" << val << std::endl;
+//		}
+//
+//		if (exprStack[stackLevel][1].compare("-") == 0) {
+//			val = lhs - rhs;
+//			//std::cout << lhs << "-" << rhs << "=" << val << std::endl;
+//		}
+//
+//		if (stackLevel > 0) {
+//			exprStack.pop_back();
+//			stackLevel--;
+//			result << val;
+//			exprStack[stackLevel].push_back(result.str());
+//		}
+//		else {
+//			exprStack[stackLevel].clear();
+//			result << val;
+//			exprStack[stackLevel].push_back(result.str());
+//		}
+//		
+//	}
+//
+//	return val;
+//}
 
 void ParseTree::printUsedVars() {
 	std::cout << "STOP" << std::endl;
@@ -407,228 +615,3 @@ void ParseTree::printUsedVars() {
 		std::cout << symbolTable[i].first << " " << symbolTable[i].second << std::endl;
 	}
 }
-
-//void ParseTree::evaluateExpression(node* exprNode, std::vector<std::string>& exprString) {
-//	if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("identifier") == 0) {
-//		exprString.push_back(exprNode->data[1]);
-//	}
-//	else if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("integer") == 0) {
-//		exprString.push_back(exprNode->data[1]);
-//	}
-//	else if (exprNode->label.compare("r") == 0 && exprNode->data[0].compare("[") == 0) {
-//		exprString.push_back(exprNode->data[0]);
-//	}
-//	if (exprNode->label.compare("z") == 0) {
-//		exprString.push_back(exprNode->data[0]);
-//	}
-//
-//	if (exprNode->label.compare("x") == 0) {
-//		exprString.push_back(exprNode->data[0]);
-//	}
-//
-//	if (exprNode->label.compare("y") == 0) {
-//		exprString.push_back(exprNode->data[0]);
-//	}
-//
-//	//Recurse
-//	for (int i = 0; i < exprNode->children.size(); ++i) {
-//		if (exprNode->children[i] != NULL) {
-//			evaluateExpression(exprNode->children[i], exprString);
-//		}
-//	}
-//
-//	if (exprNode->label.compare("r") == 0 && exprNode->data[1].compare("]") == 0) {
-//		exprString.push_back(exprNode->data[1]);
-//	}
-//
-//	return;
-//}
-//
-//void ParseTree::manualOverride(std::vector<std::string>& exprResult) {
-//	int lhs, rhs;
-//	std::vector<int> collapsePositions;
-//	std::string converted;
-//	std::ostringstream converter;
-//	std::vector<std::string> opOrder;
-//
-//	std::vector<std::string> subString;
-//
-//
-//	//Handle brackets
-//	bool collapsable = true;
-//	bool bracketCollapsable = true;
-//	bool foundBracket = false;
-//	bool didMultDiv = false;
-//	bool didSub = false;
-//	bool didAdd = false;
-//	while (collapsable) {
-//		foundBracket = false;
-//		for (int i = 0; i < exprResult.size(); ++i) {
-//			if (exprResult[i].compare("[") == 0) {
-//				foundBracket = true;
-//				//save position of most recent left bracket
-//				if (collapsePositions.size() > 0)
-//					collapsePositions.pop_back();
-//
-//				collapsePositions.push_back(i);
-//			}
-//
-//			if (exprResult[i].compare("]") == 0) {
-//				//save position of right brace of inner most bracket
-//				collapsePositions.push_back(i);
-//
-//				//Create substring from stuff in inner brackets
-//				for (int i = collapsePositions[0]; i < collapsePositions[1] + 1; ++i) {
-//					subString.push_back(exprResult[i]);
-//				}
-//
-//				//Collapse substring
-//				bracketCollapsable = true;
-//				while (bracketCollapsable) {
-//					lhs = 0;
-//					rhs = 0;
-//					converter.str("");
-//					didMultDiv = false;
-//					didSub = false;
-//					didAdd = false;
-//
-//					//Multiplication and division
-//					for (int i = 0; i < subString.size(); ++i) {
-//						if (subString[i].compare("*") == 0 || subString[i].compare("/") == 0) {
-//							if (subString[i].compare("*") == 0) {
-//								if (isalpha(subString[i - 1][0]) || isalpha(subString[i + 1][0])) {
-//									subString[i] = "&";
-//									break;
-//								}
-//								std::istringstream(subString[i - 1]) >> lhs;
-//								std::istringstream(subString[i + 1]) >> rhs;
-//								converter << lhs * rhs;
-//								converted = converter.str();
-//								subString.insert(subString.begin() + i + 2, converted);
-//								subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
-//								didMultDiv = true;
-//								break;
-//							}
-//							if (subString[i].compare("/") == 0) {
-//								if (isalpha(subString[i - 1][0]) || isalpha(subString[i + 1][0])) {
-//									subString[i] = "?";
-//									break;
-//								}
-//								std::istringstream(subString[i - 1]) >> lhs;
-//								std::istringstream(subString[i + 1]) >> rhs;
-//								converter << lhs / rhs;
-//								converted = converter.str();
-//								subString.insert(subString.begin() + i + 2, converted);
-//								subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
-//								didMultDiv = true;
-//								break;
-//							}
-//						}
-//					}
-//
-//					//Subtraction
-//					for (int i = 0; i < subString.size(); ++i) {
-//						if (subString[i].compare("-") == 0 && !didMultDiv) {
-//							if (isalpha(subString[i - 1][0]) || isalpha(subString[i + 1][0])) {
-//								subString[i] = "_";
-//								break;
-//							}
-//							std::istringstream(subString[i - 1]) >> lhs;
-//							std::istringstream(subString[i + 1]) >> rhs;
-//							converter << lhs - rhs;
-//							converted = converter.str();
-//							subString.insert(subString.begin() + i + 2, converted);
-//							subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
-//							didSub = true;
-//							break;
-//						}
-//					}
-//
-//					//Addition
-//					for (int i = 0; i < subString.size(); ++i) {
-//						if (subString[i].compare("+") == 0 && !didSub && !didMultDiv) {
-//							//skip operator
-//							if (isalpha(subString[i - 1][0])) {
-//								subString[i] = "=";
-//								break;
-//							}
-//
-//							//Skip operator
-//							if (isalpha(subString[i + 1][0])) {
-//								subString[i] = "=";
-//								break;
-//							}
-//							std::istringstream(subString[i - 1]) >> lhs;
-//							std::istringstream(subString[i + 1]) >> rhs;
-//							converter << lhs + rhs;
-//							converted = converter.str();
-//							subString.insert(subString.begin() + i + 2, converted);
-//							subString.erase(subString.begin() + i - 1, subString.begin() + i + 2);
-//							didAdd = true;
-//							break;
-//						}
-//					}
-//
-//					//Scan for any remaining operators
-//					bool operatorsRemain = false;
-//					for (int i = 0; i < subString.size(); ++i) {
-//						if (subString[i].compare("*") == 0 ||
-//							subString[i].compare("-") == 0 ||
-//							subString[i].compare("/") == 0 ||
-//							subString[i].compare("+") == 0)
-//						{
-//							operatorsRemain = true;
-//						}
-//					}
-//
-//					if (!operatorsRemain) {
-//						bracketCollapsable = false;
-//					}
-//				}
-//
-//				//Replace operator fillers in substring
-//				for (int i = 0; i < subString.size(); ++i) {
-//					if (subString[i].compare("=") == 0) {
-//						subString[i] = "+";
-//					}
-//					if (subString[i].compare("_") == 0) {
-//						subString[i] = "-";
-//					}
-//					if (subString[i].compare("?") == 0) {
-//						subString[i] = "/";
-//					}
-//					if (subString[i].compare("&") == 0) {
-//						subString[i] = "*";
-//					}
-//				}
-//
-//				//Replace bracketed expression with substring
-//				for (int i = 1; i < subString.size() - 1; ++i) {
-//					exprResult.insert(exprResult.begin() + collapsePositions[1] + i, subString[i]);
-//				}
-//				exprResult.erase(exprResult.begin() + collapsePositions[0], exprResult.begin() + collapsePositions[1] + 1);
-//				collapsePositions.clear();
-//
-//				//break the exprResult for loop
-//				break;
-//			}
-//		}
-//
-//		for (int i = 0; i < subString.size(); ++i) {
-//			std::cout << subString[i] << " ";
-//		}
-//		std::cout << std::endl;
-//
-//		subString.clear();
-//
-//		for (int i = 0; i < exprResult.size(); ++i) {
-//			std::cout << exprResult[i] << " ";
-//		}
-//		std::cout << std::endl;
-//
-//		if (!foundBracket) {
-//			collapsable = false;
-//		}
-//	}
-//
-//}

@@ -13,6 +13,7 @@
 #include <stack>
 #include <sstream>
 #include <cstdlib>
+#include <iterator>
 
 struct node {
     std::string label;
@@ -41,8 +42,12 @@ public:
 	//ASM Code generation
 	void codeGenTraversal(node* root);
 	void generateASM(node* anode);
-	int evaluateExpression(node* exprNode);
+	void getExprString(node* exprNode);
+	void evaluateExpression();
 	std::vector< std::vector<std::string> > exprStack;
+	std::vector<std::string> exprString;
+
+	bool tokenIsIdentifier(std::string token);
 
 	int skipCount;
 	int tempCount;
