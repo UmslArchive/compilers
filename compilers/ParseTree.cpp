@@ -163,6 +163,9 @@ void ParseTree::codeGenTraversal(node* root) {
 
 void ParseTree::generateASM(node* node) {
 	int exprVal;
+	int lhs, rhs;
+	std::stringstream converter;
+
 	if (node->label.compare("out") == 0) {
 		exprVal = evaluateExpression(node->children[0]);
 		std::cout << "WRITE " << exprVal << std::endl;
@@ -174,8 +177,8 @@ void ParseTree::generateASM(node* node) {
 
 	if (node->label.compare("if") == 0) {
 		//Evaluate expressions
-		int lhs = evaluateExpression(node->children[0]);
-		int rhs = evaluateExpression(node->children[2]);
+		lhs = evaluateExpression(node->children[0]);
+		rhs = evaluateExpression(node->children[2]);
 		
 		//Get relational operator
 		std::string relate = "";
@@ -252,7 +255,17 @@ void ParseTree::generateASM(node* node) {
 	}
 
 	if (node->label.compare("assign") == 0) {
+		exprVal = evaluateExpression(node->children[0]);
+		std::cout << "LOAD " << exprVal << std::endl
+			<< "STORE " << node->data[0] << std::endl;
 
+		//Update symbol table
+		for (int i = 0; i < symbolTable.size(); ++i) {
+			if (symbolTable[i].first.compare(node->data[0]) == 0) {
+				converter << exprVal;
+				converter << symbolTable[i].second;
+			}
+		}
 	}
 
 	if (node->label.compare("loop") == 0) {
