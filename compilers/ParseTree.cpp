@@ -163,8 +163,10 @@ void ParseTree::codeGenTraversal(node* root) {
 }
 
 void ParseTree::generateASM(node* node) {
-	int lhs = 0;
-	int rhs = 0;
+	std::string lhs;
+	std::string rhs;
+	int lhsConv = 0;
+	int rhsConv = 0;
 	std::stringstream converter;
 	static bool prevCondTrue = false;
 	static bool inConditional = false;
@@ -185,7 +187,7 @@ void ParseTree::generateASM(node* node) {
 	}
 
 	if (node->label.compare("in") == 0) {
-		std::cout << "READ " << node->data[1];
+		std::cout << "READ " << node->data[1] << std::endl;
 	}
 
 	if (node->label.compare("if") == 0) {
@@ -195,11 +197,13 @@ void ParseTree::generateASM(node* node) {
 		//LHS
 		getExprString(node->children[0]);
 		evaluateExpression();
+		lhs = exprString[0];
 		exprString.clear();
 
 		//RHS
 		getExprString(node->children[2]);
 		evaluateExpression();
+		rhs = exprString[0];
 		exprString.clear();
 		
 		//Get relational operator
@@ -210,10 +214,6 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<") == 0) {
-			if (lhs < rhs) {
-				prevCondTrue = true;
-			}
-
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -222,10 +222,6 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare(">") == 0) {
-			if (lhs > rhs) {
-				prevCondTrue = true;
-			}
-
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -234,10 +230,6 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("=") == 0) {
-			if (lhs == rhs) {
-				prevCondTrue = true;
-			}
-
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -248,10 +240,6 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<<") == 0) {
-			if (lhs <= rhs) {
-				prevCondTrue = true;
-			}
-
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -260,22 +248,15 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<>") == 0) {
-			if (lhs != rhs) {
-				prevCondTrue = true;
-			}
-
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
-				<< "BRZERO SKIP" << skipCount << std::endl;
+				<< "BRNEG SKIP" << skipCount << std::endl
+				<< "BRPOS SKIP" << skipCount << std::endl;
 		}
 
 		if (relate.compare(">>") == 0) {
-			if (lhs >= rhs) {
-				prevCondTrue = true;
-			}
-
 			std::cout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
@@ -285,7 +266,7 @@ void ParseTree::generateASM(node* node) {
 
 		tempCount++;
 
-		//Generate the stmt
+		//Generate the stmt then nullify
 		for (int i = 0; i < node->children[3]->children.size(); ++i) {
 			if (node->children[3]->children[i] != NULL) {
 				generateASM(node->children[3]->children[i]);
@@ -304,9 +285,10 @@ void ParseTree::generateASM(node* node) {
 	}
 
 	if (node->label.compare("assign") == 0) {
-		
 		getExprString(node->children[0]);
 		evaluateExpression();
+
+		
 		std::cout << "LOAD " << exprString[0] << std::endl
 			<< "STORE " << node->data[0] << std::endl;
 
