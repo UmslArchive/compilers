@@ -48,7 +48,10 @@ void ParseTree::printNode(node* node) {
 
 void ParseTree::openOutFileStream() {
 	fout = new std::fstream();
-	this->fout->open(outFileName + ".asm", std::fstream::out | std::fstream::trunc);
+	std::string openFile = "";
+	openFile.append(outFileName);
+	openFile.append(".asm");
+	this->fout->open(openFile.c_str(), std::fstream::out | std::fstream::trunc);
 }
 
 void ParseTree::closeOutFileStream() {
