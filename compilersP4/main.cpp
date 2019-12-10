@@ -19,6 +19,7 @@ bool readFromFile(const std::string path);
 
 std::string fileData;
 std::string fileName;
+std::string fileNameNoExtension;
 
 //=============================================================================
 
@@ -26,6 +27,8 @@ int main(int argc, char* argv[]) {
 
     //Handle file and command line arguments
     bool success = false;
+
+    fileNameNoExtension = "kb";
 
     //Handle either simulate keyboard input or file redirection
     if(argc == 1) {
@@ -59,13 +62,16 @@ int main(int argc, char* argv[]) {
 
     ParseTree parseTree = parser.parse();
 
+    parseTree.getOutFileName(fileNameNoExtension + ".asm");
     
     //testPrintParseTree(parseTree);
 
 	parseTree.staticSemanticsTraversal(parseTree.root);
 	//std::cout << "Valid Program" << std::endl;
 
+    parseTree.openOutFileStream();
 	parseTree.codeGenTraversal(parseTree.root);
+    parseTree.closeOutFileStream();
 
 	parseTree.printUsedVars();
 
@@ -87,6 +93,7 @@ bool parseArgs(int argc, char* argv[]) {
     else if(argc == 2) {
         //Retrieve the file name from the argument list
         fileName = std::string(argv[1]);
+        fileNameNoExtension = std::string(argv[1]);
     
         //Find the last occurence of '.' 
         std::string::size_type pos = fileName.find_last_of(".");

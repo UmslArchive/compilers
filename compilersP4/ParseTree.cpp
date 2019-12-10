@@ -24,7 +24,8 @@ ParseTree::ParseTree() :
 	skipCount(0),
 	tempCount(0),
 	exprString(std::vector<std::string>()),
-	loopCount(0)
+	loopCount(0),
+	outFileName("defaultOutFile.asm")
 {}
 
 void ParseTree::printNode(node* node) {
@@ -42,6 +43,14 @@ void ParseTree::printNode(node* node) {
     }
 
     std::cout << std::endl;
+}
+
+void ParseTree::openOutFileStream() {
+	this->fout.open(outFileName + ".asm", std::fstream::out | std::fstream::trunc);
+}
+
+void ParseTree::closeOutFileStream() {
+	this->fout.close();
 }
 
 void ParseTree::printAll(node* root) {
@@ -1255,4 +1264,8 @@ void ParseTree::printUsedVars() {
 	}
 
 	std::cout << "TEMP001 0" << std::endl;
+}
+
+void ParseTree::getOutFileName(std::string name) {
+	this->outFileName = name;
 }

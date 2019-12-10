@@ -14,6 +14,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <iterator>
+#include <fstream>
 
 struct node {
     std::string label;
@@ -49,17 +50,21 @@ public:
 
 	bool tokenIsIdentifier(std::string token);
 
+	std::fstream fout;
+	std::string outFileName;
+
 	int skipCount;
 	int tempCount;
 	int loopCount;
-
-	//void evaluateExpression(node* node, std::vector<std::string>& exprString);
-	//void manualOverride(std::vector<std::string>& exprResult);
 
 	void printUsedVars();
 
     void printAll(node* root);
     void printNode(node* node);
+	void getOutFileName(std::string name);
+
+	void openOutFileStream();
+	void closeOutFileStream();
 
 };
 
