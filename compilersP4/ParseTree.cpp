@@ -24,7 +24,8 @@ ParseTree::ParseTree() :
 	skipCount(0),
 	tempCount(0),
 	exprString(std::vector<std::string>()),
-	loopCount(0),
+	loopCount1(0),
+	loopCount2(0),
 	outFileName("defaultOutFile.asm"),
 	fout(NULL)
 {}
@@ -331,7 +332,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		//Print loopback label
-		*fout << "LOOP" << loopCount << ":NOOP" << std::endl;
+		*fout << "LOOP" << loopCount1++ << ":NOOP" << std::endl;
 
 		if (relate.compare("<") == 0) {
 			*fout << "LOAD " << rhs << std::endl
@@ -404,7 +405,7 @@ void ParseTree::generateASM(node* node) {
 			}
 		}
 
-		*fout << "BR LOOP" << loopCount++ << std::endl;
+		*fout << "BR LOOP" << --loopCount1 << std::endl;
 
 		*fout << "SKIP" << skipCount << ":NOOP" << std::endl;
 

@@ -55,7 +55,8 @@ public:
 
 	int skipCount;
 	int tempCount;
-	int loopCount;
+	int loopCount1;
+	int loopCount2;
 
 	void printUsedVars();
 
