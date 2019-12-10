@@ -76,12 +76,14 @@ int main(int argc, char* argv[]) {
 	//std::cout << "Valid Program" << std::endl;
 
     parseTree.openOutFileStream();
-    
+
 	parseTree.codeGenTraversal(parseTree.root);
 
 	parseTree.printUsedVars();
 
     parseTree.closeOutFileStream();
+
+    std::cout << fileNameNoExtension << ".asm" << std::endl;
 
     return 0;
 }
