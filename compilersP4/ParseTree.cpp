@@ -404,7 +404,7 @@ void ParseTree::generateASM(node* node) {
 			}
 		}
 
-		*fout << "BR LOOP" << loopCount << std::endl;
+		*fout << "BR LOOP" << loopCount++ << std::endl;
 
 		*fout << "SKIP" << skipCount << ":NOOP" << std::endl;
 
