@@ -326,6 +326,16 @@ void ParseTree::generateASM(node* node) {
 //iterators.
 void ParseTree::evaluateExpression() {
 
+	if (exprString.size() == 1) {
+		if (tokenIsIdentifier(exprString[0])) {
+			std::cout << "expr is identifier " << exprString[0] << std::endl;
+		}
+		else {
+			std::cout << "expr is integer " << exprString[0] << std::endl;
+		}
+		return;
+	}
+
 	std::stringstream converter;
 	bool didCollapse = false;
 	bool moreBrackets = false;
