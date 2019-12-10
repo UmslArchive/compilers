@@ -184,22 +184,22 @@ void ParseTree::generateASM(node* node) {
 		evaluateExpression();
 
 		if (tokenIsIdentifier(exprString[0]) && exprString.size() == 1) {
-			std::cout << "WRITE " << exprString[0] << std::endl;
+			*fout << "WRITE " << exprString[0] << std::endl;
 		}
 		else if(exprString.size() < 2) {
-			std::cout << "LOAD " << exprString[0] << std::endl
+			*fout << "LOAD " << exprString[0] << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "WRITE TEMP" << tempCount << std::endl;
 			tempCount++;
 		}
 		else {
-			std::cout << "WRITE TEMP001" << std::endl;
+			*fout << "WRITE TEMP001" << std::endl;
 		}
 		exprString.clear();
 	}
 
 	if (node->label.compare("in") == 0) {
-		std::cout << "READ " << node->data[1] << std::endl;
+		*fout << "READ " << node->data[1] << std::endl;
 
 		//Update symbol table
 		for (int i = 0; i < symbolTable.size(); ++i) {
@@ -232,7 +232,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -240,7 +240,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare(">") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -248,7 +248,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("=") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -258,7 +258,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<<") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -266,7 +266,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<>") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -275,7 +275,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare(">>") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -302,7 +302,7 @@ void ParseTree::generateASM(node* node) {
 			}
 		}
 
-		std::cout << "SKIP" << skipCount << ":NOOP" << std::endl;
+		*fout << "SKIP" << skipCount << ":NOOP" << std::endl;
 
 		skipCount++;
 	}
@@ -328,10 +328,10 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		//Print loopback label
-		std::cout << "LOOP" << loopCount << ":NOOP" << std::endl;
+		*fout << "LOOP" << loopCount << ":NOOP" << std::endl;
 
 		if (relate.compare("<") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -339,7 +339,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare(">") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -347,7 +347,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("=") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -357,7 +357,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<<") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -365,7 +365,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare("<>") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -374,7 +374,7 @@ void ParseTree::generateASM(node* node) {
 		}
 
 		if (relate.compare(">>") == 0) {
-			std::cout << "LOAD " << rhs << std::endl
+			*fout << "LOAD " << rhs << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
@@ -401,9 +401,9 @@ void ParseTree::generateASM(node* node) {
 			}
 		}
 
-		std::cout << "BR LOOP" << loopCount << std::endl;
+		*fout << "BR LOOP" << loopCount << std::endl;
 
-		std::cout << "SKIP" << skipCount << ":NOOP" << std::endl;
+		*fout << "SKIP" << skipCount << ":NOOP" << std::endl;
 
 		skipCount++;
 	}
@@ -414,11 +414,11 @@ void ParseTree::generateASM(node* node) {
 
 		
 		if (exprString.size() == 1) {
-			std::cout << "LOAD " << exprString[0] << std::endl
+			*fout << "LOAD " << exprString[0] << std::endl
 				<< "STORE " << node->data[0] << std::endl;
 		}
 		else {
-			std::cout << "LOAD TEMP001" << std::endl
+			*fout << "LOAD TEMP001" << std::endl
 				<< "STORE " << node->data[0] << std::endl;
 		}
 
@@ -447,25 +447,25 @@ void ParseTree::evaluateExpression() {
 
 	//another manual override
 	if (exprString.size() == 3 && tokenIsIdentifier(exprString[0])) {
-		std::cout << "LOAD " << exprString[0] << std::endl;
+		*fout << "LOAD " << exprString[0] << std::endl;
 
 		if (exprString[1].compare("+") == 0) {
-			std::cout << "ADD " << exprString[2] << std::endl
+			*fout << "ADD " << exprString[2] << std::endl
 				<< "STORE TEMP001" << std::endl;
 		}
 
 		if (exprString[1].compare("-") == 0) {
-			std::cout << "SUB " << exprString[2] << std::endl
+			*fout << "SUB " << exprString[2] << std::endl
 				<< "STORE TEMP001" << std::endl;
 		}
 
 		if (exprString[1].compare("*") == 0) {
-			std::cout << "MULT " << exprString[2] << std::endl
+			*fout << "MULT " << exprString[2] << std::endl
 				<< "STORE TEMP001" << std::endl;
 		}
 
 		if (exprString[1].compare("/") == 0) {
-			std::cout << "DIV " << exprString[2] << std::endl
+			*fout << "DIV " << exprString[2] << std::endl
 				<< "STORE TEMP001" << std::endl;
 		}
 
@@ -1256,17 +1256,17 @@ void ParseTree::getExprString(node* exprNode) {
 //}
 
 void ParseTree::printUsedVars() {
-	std::cout << "STOP" << std::endl;
+	*fout << "STOP" << std::endl;
 
 	for (int i = 0; i < tempCount; ++i) {
-		std::cout << "TEMP" << i << " 0" << std::endl;
+		*fout << "TEMP" << i << " 0" << std::endl;
 	}
 
 	for (int i = 0; i < symbolTable.size(); ++i) {
-		std::cout << symbolTable[i].first << " " << symbolTable[i].second << std::endl;
+		*fout << symbolTable[i].first << " " << symbolTable[i].second << std::endl;
 	}
 
-	std::cout << "TEMP001 0" << std::endl;
+	*fout << "TEMP001 0" << std::endl;
 }
 
 void ParseTree::getOutFileName(std::string name) {

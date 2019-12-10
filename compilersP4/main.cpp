@@ -76,10 +76,12 @@ int main(int argc, char* argv[]) {
 	//std::cout << "Valid Program" << std::endl;
 
     parseTree.openOutFileStream();
+    
 	parseTree.codeGenTraversal(parseTree.root);
-    parseTree.closeOutFileStream();
 
 	parseTree.printUsedVars();
+
+    parseTree.closeOutFileStream();
 
     return 0;
 }
