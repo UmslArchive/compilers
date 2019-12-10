@@ -385,6 +385,7 @@ void ParseTree::generateASM(node* node) {
 				<< "BRNEG SKIP" << skipCount << std::endl;
 		}
 
+		skipCount++;
 		tempCount++;
 
 		//Generate the stmt then nullify the branch
@@ -407,9 +408,7 @@ void ParseTree::generateASM(node* node) {
 
 		*fout << "BR LOOP" << --loopCount1 << std::endl;
 
-		*fout << "SKIP" << skipCount << ":NOOP" << std::endl;
-
-		skipCount++;
+		*fout << "SKIP" << --skipCount << ":NOOP" << std::endl;
 	}
 
 	if (node->label.compare("assign") == 0) {
