@@ -60,10 +60,10 @@ int main(int argc, char* argv[]) {
     ParseTree parseTree = parser.parse();
 
     
-    testPrintParseTree(parseTree);
+    //testPrintParseTree(parseTree);
 
 	parseTree.staticSemanticsTraversal(parseTree.root);
-	std::cout << "Valid Program" << std::endl;
+	//std::cout << "Valid Program" << std::endl;
 
 	parseTree.codeGenTraversal(parseTree.root);
 

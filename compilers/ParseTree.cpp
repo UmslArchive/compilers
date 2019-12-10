@@ -163,7 +163,6 @@ void ParseTree::codeGenTraversal(node* root) {
 }
 
 void ParseTree::generateASM(node* node) {
-	int exprVal = 0;
 	int lhs = 0;
 	int rhs = 0;
 	std::stringstream converter;
@@ -173,8 +172,16 @@ void ParseTree::generateASM(node* node) {
 	if (node->label.compare("out") == 0) {
 		getExprString(node->children[0]);
 		evaluateExpression();
+
+		if (tokenIsIdentifier(exprString[0])) {
+			std::cout << "WRITE " << exprString[0] << std::endl;
+		}
+		else {
+			std::cout << "LOAD " << exprString[0] << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "WRITE TEMP" << tempCount << std::endl;
+		}
 		exprString.clear();
-		std::cout << "STORE TEMP" << exprVal << std::endl;
 	}
 
 	if (node->label.compare("in") == 0) {
@@ -300,17 +307,11 @@ void ParseTree::generateASM(node* node) {
 		
 		getExprString(node->children[0]);
 		evaluateExpression();
-		exprString.clear();
-		std::cout << "LOAD " << exprVal << std::endl
+		std::cout << "LOAD " << exprString[0] << std::endl
 			<< "STORE " << node->data[0] << std::endl;
 
-		//Update symbol table
-		for (int i = 0; i < symbolTable.size(); ++i) {
-			if (symbolTable[i].first.compare(node->data[0]) == 0 && ((inConditional && prevCondTrue) || !inConditional)) {
-				converter << exprVal;
-				symbolTable[i].second = converter.str();
-			}
-		}
+		exprString.clear();
+
 	}
 
 	if (node->label.compare("loop") == 0) {
@@ -320,7 +321,7 @@ void ParseTree::generateASM(node* node) {
 }
 
 //Function leaves evaluated expression value on the accumulator.
-//I absolutely could not get expression parsing to work correctly using the tree
+//I absolutely could not get expression parsing to work correctly using the
 //tree traversal method, so this is something of a manual override which
 //parses the expr left to right, then manually does order of operations using 
 //iterators.
@@ -328,10 +329,10 @@ void ParseTree::evaluateExpression() {
 
 	if (exprString.size() == 1) {
 		if (tokenIsIdentifier(exprString[0])) {
-			std::cout << "expr is identifier " << exprString[0] << std::endl;
+			//std::cout << "expr is identifier " << exprString[0] << std::endl;
 		}
 		else {
-			std::cout << "expr is integer " << exprString[0] << std::endl;
+			//std::cout << "expr is integer " << exprString[0] << std::endl;
 		}
 		return;
 	}
@@ -949,7 +950,7 @@ void ParseTree::evaluateExpression() {
 		rightSub++;
 	}
 	
-	std::cout << "evaluated expr = " << exprString[0] << std::endl;
+	//std::cout << "evaluated expr = " << exprString[0] << std::endl;
 
 	return;
 }
