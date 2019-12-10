@@ -50,7 +50,7 @@ public:
 
 	bool tokenIsIdentifier(std::string token);
 
-	std::fstream fout;
+	std::fstream* fout;
 	std::string outFileName;
 
 	int skipCount;

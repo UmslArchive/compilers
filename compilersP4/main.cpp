@@ -52,6 +52,12 @@ int main(int argc, char* argv[]) {
        success = true;
     }
 
+    //Remove extension from file name
+    std::string::size_type pos = fileNameNoExtension.find_last_of(".");
+    if(pos != std::string::npos) {            
+        fileNameNoExtension.resize(fileNameNoExtension.size() - 5);
+    }
+
     //-----
 
     //Testing:
@@ -62,7 +68,7 @@ int main(int argc, char* argv[]) {
 
     ParseTree parseTree = parser.parse();
 
-    parseTree.getOutFileName(fileNameNoExtension + ".asm");
+    parseTree.getOutFileName(fileNameNoExtension);
     
     //testPrintParseTree(parseTree);
 
