@@ -240,7 +240,7 @@ void ParseTree::generateASM(node* node) {
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
-				<< "BRPOS SKIP" << skipCount << std::endl;
+				<< "BRZPOS SKIP" << skipCount << std::endl;
 		}
 
 		if (relate.compare(">") == 0) {
@@ -338,7 +338,7 @@ void ParseTree::generateASM(node* node) {
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
-				<< "BRPOS SKIP" << skipCount << std::endl;
+				<< "BRZPOS SKIP" << skipCount << std::endl;
 		}
 
 		if (relate.compare(">") == 0) {
