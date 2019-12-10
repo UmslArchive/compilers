@@ -170,20 +170,30 @@ void ParseTree::generateASM(node* node) {
 		getExprString(node->children[0]);
 		evaluateExpression();
 
-		if (tokenIsIdentifier(exprString[0])) {
+		if (tokenIsIdentifier(exprString[0]) && exprString.size() == 1) {
 			std::cout << "WRITE " << exprString[0] << std::endl;
 		}
-		else {
+		else if(exprString.size() < 2) {
 			std::cout << "LOAD " << exprString[0] << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "WRITE TEMP" << tempCount << std::endl;
 			tempCount++;
+		}
+		else {
+			std::cout << "WRITE TEMP001" << std::endl;
 		}
 		exprString.clear();
 	}
 
 	if (node->label.compare("in") == 0) {
 		std::cout << "READ " << node->data[1] << std::endl;
+
+		//Update symbol table
+		for (int i = 0; i < symbolTable.size(); ++i) {
+			if (symbolTable[i].first.compare(node->data[1]) == 0) {
+
+			}
+		}
 	}
 
 	if (node->label.compare("if") == 0) {
@@ -315,6 +325,33 @@ void ParseTree::evaluateExpression() {
 		else {
 			//std::cout << "expr is integer " << exprString[0] << std::endl;
 		}
+		return;
+	}
+
+	//another manual override
+	if (exprString.size() == 3 && tokenIsIdentifier(exprString[0])) {
+		std::cout << "LOAD " << exprString[0] << std::endl;
+
+		if (exprString[1].compare("+") == 0) {
+			std::cout << "ADD " << exprString[2] << std::endl
+				<< "STORE TEMP001" << std::endl;
+		}
+
+		if (exprString[1].compare("-") == 0) {
+			std::cout << "SUB " << exprString[2] << std::endl
+				<< "STORE TEMP001" << std::endl;
+		}
+
+		if (exprString[1].compare("*") == 0) {
+			std::cout << "MULT " << exprString[2] << std::endl
+				<< "STORE TEMP001" << std::endl;
+		}
+
+		if (exprString[1].compare("/") == 0) {
+			std::cout << "DIV " << exprString[2] << std::endl
+				<< "STORE TEMP001" << std::endl;
+		}
+
 		return;
 	}
 
@@ -1111,4 +1148,6 @@ void ParseTree::printUsedVars() {
 	for (int i = 0; i < symbolTable.size(); ++i) {
 		std::cout << symbolTable[i].first << " " << symbolTable[i].second << std::endl;
 	}
+
+	std::cout << "TEMP001 0" << std::endl;
 }
