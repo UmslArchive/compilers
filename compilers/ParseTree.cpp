@@ -163,13 +163,8 @@ void ParseTree::codeGenTraversal(node* root) {
 }
 
 void ParseTree::generateASM(node* node) {
-	std::string lhs;
-	std::string rhs;
-	int lhsConv = 0;
-	int rhsConv = 0;
-	std::stringstream converter;
-	static bool prevCondTrue = false;
-	static bool inConditional = false;
+	std::string lhs = "";
+	std::string rhs = "";
 
 	if (node->label.compare("out") == 0) {
 		getExprString(node->children[0]);
@@ -182,6 +177,7 @@ void ParseTree::generateASM(node* node) {
 			std::cout << "LOAD " << exprString[0] << std::endl
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "WRITE TEMP" << tempCount << std::endl;
+			tempCount++;
 		}
 		exprString.clear();
 	}
@@ -191,7 +187,6 @@ void ParseTree::generateASM(node* node) {
 	}
 
 	if (node->label.compare("if") == 0) {
-		inConditional = true;
 		//Evaluate expressions:
 
 		//LHS
@@ -266,10 +261,19 @@ void ParseTree::generateASM(node* node) {
 
 		tempCount++;
 
-		//Generate the stmt then nullify
+		//Generate the stmt then nullify the branch
 		for (int i = 0; i < node->children[3]->children.size(); ++i) {
-			if (node->children[3]->children[i] != NULL) {
+			//non-block nodes
+			if (node->children[3]->children[i] != NULL && 
+				node->children[3]->children[i]->label.compare("block") != 0) 
+			{
 				generateASM(node->children[3]->children[i]);
+				node->children[3]->children[i] = NULL;
+				break;
+			}
+			//block nodes
+			else if (node->children[3]->children[i] != NULL) {
+				codeGenTraversal(node->children[3]->children[i]);
 				node->children[3]->children[i] = NULL;
 				break;
 			}
@@ -278,9 +282,9 @@ void ParseTree::generateASM(node* node) {
 		std::cout << "SKIP" << skipCount << ":NOOP" << std::endl;
 
 		skipCount++;
+	}
 
-		inConditional = false;
-		prevCondTrue = false;
+	if (node->label.compare("loop") == 0) {
 
 	}
 
@@ -294,12 +298,7 @@ void ParseTree::generateASM(node* node) {
 
 		exprString.clear();
 
-	}
-
-	if (node->label.compare("loop") == 0) {
-
-	}
-	
+	}	
 }
 
 //Function leaves evaluated expression value on the accumulator.
