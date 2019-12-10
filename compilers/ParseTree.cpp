@@ -23,7 +23,8 @@ ParseTree::ParseTree() :
 	exprStack(1, std::vector<std::string>()),
 	skipCount(0),
 	tempCount(0),
-	exprString(std::vector<std::string>())
+	exprString(std::vector<std::string>()),
+	loopCount(0)
 {}
 
 void ParseTree::printNode(node* node) {
@@ -295,7 +296,104 @@ void ParseTree::generateASM(node* node) {
 	}
 
 	if (node->label.compare("loop") == 0) {
+		//LHS
+		getExprString(node->children[0]);
+		evaluateExpression();
+		lhs = exprString[0];
+		exprString.clear();
 
+		//RHS
+		getExprString(node->children[2]);
+		evaluateExpression();
+		rhs = exprString[0];
+		exprString.clear();
+
+		//Get relational operator
+		std::string relate = "";
+		relate.append(node->children[1]->data[0]);
+		if (node->children[1]->children.size() > 0 && node->children[1]->children[0] != NULL) {
+			relate.append(node->children[1]->children[0]->data[0]);
+		}
+
+		//Print loopback label
+		std::cout << "LOOP" << loopCount << ":NOOP" << std::endl;
+
+		if (relate.compare("<") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRPOS SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare(">") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRNEG SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare("=") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRNEG SKIP" << skipCount << std::endl
+				<< "BRPOS SKIP" << skipCount << std::endl;
+
+		}
+
+		if (relate.compare("<<") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRZPOS SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare("<>") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRNEG SKIP" << skipCount << std::endl
+				<< "BRPOS SKIP" << skipCount << std::endl;
+		}
+
+		if (relate.compare(">>") == 0) {
+			std::cout << "LOAD " << rhs << std::endl
+				<< "STORE TEMP" << tempCount << std::endl
+				<< "LOAD " << lhs << std::endl
+				<< "SUB TEMP" << tempCount << std::endl
+				<< "BRNEG SKIP" << skipCount << std::endl;
+		}
+
+		tempCount++;
+
+		//Generate the stmt then nullify the branch
+		for (int i = 0; i < node->children[3]->children.size(); ++i) {
+			//non-block nodes
+			if (node->children[3]->children[i] != NULL &&
+				node->children[3]->children[i]->label.compare("block") != 0)
+			{
+				generateASM(node->children[3]->children[i]);
+				node->children[3]->children[i] = NULL;
+				break;
+			}
+			//block nodes
+			else if (node->children[3]->children[i] != NULL) {
+				codeGenTraversal(node->children[3]->children[i]);
+				node->children[3]->children[i] = NULL;
+				break;
+			}
+		}
+
+		std::cout << "BR LOOP" << loopCount << std::endl;
+
+		std::cout << "SKIP" << skipCount << ":NOOP" << std::endl;
+
+		skipCount++;
 	}
 
 	if (node->label.compare("assign") == 0) {
@@ -303,11 +401,18 @@ void ParseTree::generateASM(node* node) {
 		evaluateExpression();
 
 		
-		std::cout << "LOAD " << exprString[0] << std::endl
-			<< "STORE " << node->data[0] << std::endl;
+		if (exprString.size() == 1) {
+			std::cout << "LOAD " << exprString[0] << std::endl
+				<< "STORE " << node->data[0] << std::endl;
+		}
+		else {
+			std::cout << "LOAD TEMP001" << std::endl
+				<< "STORE " << node->data[0] << std::endl;
+		}
+
+		
 
 		exprString.clear();
-
 	}	
 }
 
