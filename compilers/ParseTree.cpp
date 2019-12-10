@@ -328,12 +328,13 @@ void ParseTree::evaluateExpression() {
 
 	std::stringstream converter;
 	bool didCollapse = false;
-	bool moreBrackets = true;
+	bool moreBrackets = false;
 	int orderOfOps = 0;
 	bool didAll = false;
+	bool skipBracketRemoval = false;
 	
 	//5 indices point to something like this:
-	//	[ x + 3 ]	OR	[ x + 3 * 7 ]
+	//	[ x + 3 ]	OR	[ x + 3 * 7 ] etc.
 	//	^ ^ ^ ^ ^		^     ^ ^ ^ ^
 	//
 	//the outer iterators hold the range between brackets or entire expr if
@@ -362,7 +363,7 @@ void ParseTree::evaluateExpression() {
 
 				if (exprString[j].compare("]") == 0) {
 					rightSquare = j;
-					foundPair = true;
+					moreBrackets = true;
 					break;
 				}
 			}
@@ -370,12 +371,22 @@ void ParseTree::evaluateExpression() {
 	}
 
 	//Set the subexpression iterators inside the square brackets
-	leftSub = leftSquare + 1;
-	midSub = leftSquare + 2;
-	rightSub = leftSquare + 3;
+	if (moreBrackets) {
+		leftSub = leftSquare + 1;
+		midSub = leftSquare + 2;
+		rightSub = leftSquare + 3;
+	}
+	else {
+		skipBracketRemoval = true;
+	}
+	
 
-	//Scan for multiplication and division
-	while (moreBrackets || !didAll) {
+	//Collapse all pairs of brackets
+	while ((moreBrackets || !didAll) && !skipBracketRemoval) {
+
+		if (midSub >= exprString.size())
+			break;
+
 		didCollapse = false;
 		moreBrackets = false;
 
@@ -636,12 +647,20 @@ void ParseTree::evaluateExpression() {
 						}
 					}
 				}
+				if (foundPair)
+					orderOfOps = 0;
 			}
 			
+			//If a new pair of collapsable brackets is found
 			if (moreBrackets && rightSquare - leftSquare > 2) {
 				leftSub = leftSquare + 1;
 				midSub = leftSquare + 2;
 				rightSub = leftSquare + 3;
+			}
+			
+			//There are no more brackets
+			else {
+				didAll = true;
 			}
 		}
 		else if (exprString[rightSub].compare("]") == 0) {
@@ -677,6 +696,250 @@ void ParseTree::evaluateExpression() {
 			rightSub++;
 		}
 	}
+	
+	//=====
+
+	bool moreSubExpressions = true;
+	bool collapsedSubExpression = false;
+
+	leftSub = 0;
+	midSub = 1;
+	rightSub = 2;
+
+	orderOfOps = 0;
+
+	while (moreSubExpressions) {
+		//Collapse all non-bracketed sub expressions
+		if ((exprString[midSub].compare("*") == 0 || exprString[midSub].compare("/") == 0) && orderOfOps == 0) {
+
+			//sub expr is multiplication
+			if (exprString[midSub].compare("*") == 0) {
+
+				//lhs
+				if (tokenIsIdentifier(exprString[leftSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> lhs;
+						}
+					}
+				}
+				else {
+					converter.str(exprString[leftSub]);
+					converter >> lhs;
+				}
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+
+				//rhs
+				if (tokenIsIdentifier(exprString[rightSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> rhs;
+						}
+					}
+				}
+				else {
+					converter.str(exprString[rightSub]);
+					converter >> rhs;
+				}
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+
+				//Collapse
+				result = lhs * rhs;
+				converter << result;
+				exprString.erase(exprString.begin() + rightSub);
+				exprString.erase(exprString.begin() + midSub);
+				exprString[leftSub] = converter.str();
+				didCollapse = true;
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+			}
+
+			//sub expr is division
+			else if (exprString[midSub].compare("/") == 0) {
+				//lhs
+				if (tokenIsIdentifier(exprString[leftSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> lhs;
+						}
+					}
+				}
+				else {
+					converter.str(exprString[leftSub]);
+					converter >> lhs;
+				}
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+
+				//rhs
+				if (tokenIsIdentifier(exprString[rightSub])) {
+					for (int i = 0; i < symbolTable.size(); ++i) {
+						if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+							converter.str(symbolTable[i].second);
+							converter >> rhs;
+						}
+					}
+				}
+				else {
+					converter.str(exprString[rightSub]);
+					converter >> rhs;
+				}
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+
+				//Collapse
+				result = lhs / rhs;
+				converter << result;
+				exprString.erase(exprString.begin() + rightSub);
+				exprString.erase(exprString.begin() + midSub);
+				exprString[leftSub] = converter.str();
+				didCollapse = true;
+
+				//Reset converter
+				converter.str("");
+				converter.clear();
+			}
+		}
+
+		//Subtraction
+		else if (exprString[midSub].compare("-") == 0 && orderOfOps == 1) {
+			//lhs
+			if (tokenIsIdentifier(exprString[leftSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> lhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[leftSub]);
+				converter >> lhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//rhs
+			if (tokenIsIdentifier(exprString[rightSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> rhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[rightSub]);
+				converter >> rhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//Collapse
+			result = lhs - rhs;
+			converter << result;
+			exprString.erase(exprString.begin() + rightSub);
+			exprString.erase(exprString.begin() + midSub);
+			exprString[leftSub] = converter.str();
+			didCollapse = true;
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+		}
+
+		//Addition
+		else if (exprString[midSub].compare("+") == 0 && orderOfOps == 2) {
+			//lhs
+			if (tokenIsIdentifier(exprString[leftSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[leftSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> lhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[leftSub]);
+				converter >> lhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//rhs
+			if (tokenIsIdentifier(exprString[rightSub])) {
+				for (int i = 0; i < symbolTable.size(); ++i) {
+					if (symbolTable[i].first.compare(exprString[rightSub]) == 0) {
+						converter.str(symbolTable[i].second);
+						converter >> rhs;
+					}
+				}
+			}
+			else {
+				converter.str(exprString[rightSub]);
+				converter >> rhs;
+			}
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+
+			//Collapse
+			result = lhs + rhs;
+			converter << result;
+			exprString.erase(exprString.begin() + rightSub);
+			exprString.erase(exprString.begin() + midSub);
+			exprString[leftSub] = converter.str();
+			didCollapse = true;
+
+			//Reset converter
+			converter.str("");
+			converter.clear();
+		}
+
+		if (exprString.size() == 1) {
+			moreSubExpressions = false;
+		}
+
+		if (rightSub >= exprString.size()) {
+			leftSub = 0;
+			midSub = 1;
+			rightSub = 2;
+
+			if(orderOfOps < 2)
+				orderOfOps++;
+			else
+				orderOfOps = 0;
+			continue;
+		}
+
+		leftSub++;
+		midSub++;
+		rightSub++;
+	}
+	
+	std::cout << "evaluated expr = " << exprString[0] << std::endl;
 
 	return;
 }
