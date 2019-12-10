@@ -24,35 +24,35 @@ std::string fileName;
 
 int main(int argc, char* argv[]) {
 
-    ////Handle file and command line arguments
-    //bool success = false;
+    //Handle file and command line arguments
+    bool success = false;
 
-    ////Handle either simulate keyboard input or file redirection
-    //if(argc == 1) {
-    //    handleFileRedirOrKeyboardSim();
-    //    success = true;
-    //}
+    //Handle either simulate keyboard input or file redirection
+    if(argc == 1) {
+       handleFileRedirOrKeyboardSim();
+       success = true;
+    }
 
-    ////Otherwise need to load a file
-    //else {
-    //    //Get the file name.
-    //    if(!parseArgs(argc, argv)) {
-    //        std::cerr << "Error: Function: parseArgs(int, char**)" << std::endl;
-    //        return 0;
-    //    }
+    //Otherwise need to load a file
+    else {
+       //Get the file name.
+       if(!parseArgs(argc, argv)) {
+           std::cerr << "Error: Function: parseArgs(int, char**)" << std::endl;
+           return 0;
+       }
 
-    //    //Read entire file contents into fileString
-    //    if(!readFromFile(fileName)) {
-    //        std::cerr << "Error: File could not be opened" << std::endl;
-    //        return 0;
-    //    }
-    //    success = true;
-    //}
+       //Read entire file contents into fileString
+       if(!readFromFile(fileName)) {
+           std::cerr << "Error: File could not be opened" << std::endl;
+           return 0;
+       }
+       success = true;
+    }
 
     //-----
 
     //Testing:
-	readFromFile("testfile.fs19");
+	//readFromFile("testfile.fs19");
 
     Parser parser;
     parser.sendFileDataToScanner(fileData);
