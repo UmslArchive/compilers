@@ -274,8 +274,7 @@ void ParseTree::generateASM(node* node) {
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
-				<< "BRNEG SKIP" << skipCount << std::endl
-				<< "BRPOS SKIP" << skipCount << std::endl;
+				<< "BRZERO SKIP" << skipCount << std::endl;
 		}
 
 		if (relate.compare(">>") == 0) {
