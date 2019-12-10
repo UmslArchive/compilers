@@ -261,7 +261,7 @@ void ParseTree::generateASM(node* node) {
 				<< "STORE TEMP" << tempCount << std::endl
 				<< "LOAD " << lhs << std::endl
 				<< "SUB TEMP" << tempCount << std::endl
-				<< "BRZNEG SKIP" << skipCount << std::endl;
+				<< "BRNEG SKIP" << skipCount << std::endl;
 		}
 
 		tempCount++;

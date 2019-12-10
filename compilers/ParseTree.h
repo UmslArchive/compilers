@@ -51,6 +51,7 @@ public:
 
 	int skipCount;
 	int tempCount;
+
 	//void evaluateExpression(node* node, std::vector<std::string>& exprString);
 	//void manualOverride(std::vector<std::string>& exprResult);
 
